@@ -1,0 +1,39 @@
+[
+  {
+    "id": "PKP-A6118B70",
+    "userId": "ECO-HH-6522",
+    "userPhone": "270948347420873",
+    "userName": "Eyituoyor Prest",
+    "userLga": "Alimosho",
+    "wasteType": "PET Bottles",
+    "bags": "2",
+    "address": "Ikeja",
+    "preferredTime": "Today, 6pm",
+    "status": "completed",
+    "collectorId": "270948347420873",
+    "collectorName": "Collector",
+    "collectorPhone": "270948347420873",
+    "createdAt": "2026-05-29T20:12:21.666Z",
+    "updatedAt": "2026-05-29T20:34:14.790Z",
+    "material": "Carton",
+    "weight": 15,
+    "completedAt": "2026-05-29T20:34:14.790Z"
+  },
+  {
+    "id": "PKP-6E9D9081",
+    "userId": "ECO-HH-4395",
+    "userPhone": "111183935889646",
+    "userName": "Sena D",
+    "userLga": "Alimosho",
+    "wasteType": "PET Bottles",
+    "bags": "1",
+    "address": "Agege street",
+    "preferredTime": "Today 6pm",
+    "status": "requested",
+    "collectorId": null,
+    "collectorName": null,
+    "collectorPhone": null,
+    "createdAt": "2026-05-29T20:38:59.061Z",
+    "updatedAt": "2026-05-29T20:38:59.061Z"
+  }
+]

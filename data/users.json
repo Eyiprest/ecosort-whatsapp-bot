@@ -1,0 +1,36 @@
+[
+  {
+    "id": "ECO-HH-6522",
+    "phone": "270948347420873",
+    "name": "Eyituoyor Prest",
+    "userPhone": "08164585111",
+    "lga": "Alimosho",
+    "primaryWaste": "PET Bottles",
+    "lang": "en",
+    "points": 105,
+    "badges": [
+      "♻️ Recycler"
+    ],
+    "streak": 1,
+    "lastActiveDate": "Fri May 29 2026",
+    "totalPickups": 1,
+    "verified": false,
+    "registeredAt": "2026-05-29T20:11:46.100Z"
+  },
+  {
+    "id": "ECO-HH-4395",
+    "phone": "111183935889646",
+    "name": "Sena D",
+    "userPhone": "8137120941",
+    "lga": "Alimosho",
+    "primaryWaste": "PET Bottles",
+    "lang": "en",
+    "points": 10,
+    "badges": [],
+    "streak": 1,
+    "lastActiveDate": "Fri May 29 2026",
+    "totalPickups": 1,
+    "verified": false,
+    "registeredAt": "2026-05-29T20:36:31.708Z"
+  }
+]

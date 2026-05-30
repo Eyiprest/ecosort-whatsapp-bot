@@ -1,0 +1,22 @@
+name: ecosort-whatsapp-bot
+services:
+  - name: bot
+    type: web
+    git:
+      repository: github.com/YOUR_GITHUB_USERNAME/ecosort-whatsapp-bot
+      branch: main
+    build:
+      buildpack: nodejs
+    run:
+      command: "node server.js"
+    ports:
+      - port: 3000
+        protocol: HTTP
+    env:
+      - key: NODE_ENV
+        value: production
+      - key: SESSION_NAME
+        value: ecosort-session
+    healthchecks:
+      - path: /health
+        port: 3000

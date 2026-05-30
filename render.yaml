@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: ecosort-whatsapp-bot
+    env: node
+    buildCommand: npm install
+    startCommand: node server.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SESSION_NAME
+        value: ecosort-session
+      - key: PORT
+        generateValue: false
+        value: 10000
+    disk:
+      name: ecosort-auth
+      mountPath: /opt/render/project/src/auth
+      sizeGB: 1

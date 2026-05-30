@@ -1,0 +1,36 @@
+[
+  {
+    "id": "LST-F0D624AC",
+    "collectorPhone": "270948347420873",
+    "collectorName": "Collector",
+    "collectorId": "270948347420873",
+    "collectorRating": 5,
+    "collectorVerified": false,
+    "material": "Glass",
+    "quantity": 7,
+    "pricePerKg": 200,
+    "totalValue": 1400,
+    "location": "Barista",
+    "notes": "",
+    "status": "available",
+    "createdAt": "2026-05-29T20:35:21.751Z",
+    "updatedAt": "2026-05-29T20:35:21.751Z"
+  },
+  {
+    "id": "LST-9CD4FBB3",
+    "collectorPhone": "111183935889646",
+    "collectorName": "Chinedu",
+    "collectorId": "ECO-COL-8338",
+    "collectorRating": 5,
+    "collectorVerified": false,
+    "material": "Aluminum",
+    "quantity": 50,
+    "pricePerKg": 3000,
+    "totalValue": 150000,
+    "location": "Surelere",
+    "notes": "",
+    "status": "available",
+    "createdAt": "2026-05-29T20:47:01.627Z",
+    "updatedAt": "2026-05-29T20:47:01.627Z"
+  }
+]
