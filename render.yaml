@@ -10,10 +10,7 @@ services:
         value: production
       - key: SESSION_NAME
         value: ecosort-session
-    disks:
-      - name: ecosort-auth
-        mountPath: /data/auth
-        sizeGB: 1
-      - name: ecosort-storage
-        mountPath: /data/storage
-        sizeGB: 1
+      - key: AUTH_DIR
+        value: /tmp/auth
+      - key: DATA_DIR
+        value: /tmp/storage

@@ -22,8 +22,8 @@ const buyer = require('./flows/buyer');
 const marketplace = require('./flows/marketplace');
 const education = require('./flows/education');
 
-const DATA_DIR = process.env.DATA_DIR || '/data/storage';
-const AUTH_DIR = process.env.AUTH_DIR || '/data/auth';
+const DATA_DIR = process.env.DATA_DIR || '/tmp/storage';
+const AUTH_DIR = process.env.AUTH_DIR || '/tmp/auth';
 const PORT = process.env.PORT || 3000;
 
 function findChromiumPath() {
