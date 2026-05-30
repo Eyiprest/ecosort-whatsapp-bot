@@ -167,6 +167,43 @@ If the first reconnect fails, it retries after 30 seconds. The session cookie is
 
 ---
 
+## Render Deployment
+
+This project is configured for Render with persistent disk storage for WhatsApp auth and JSON bot storage.
+
+- Build Command: `npm install`
+- Start Command: `npm start`
+- Environment Variables:
+  - `NODE_ENV=production`
+  - `SESSION_NAME=ecosort-session`
+- Health endpoints:
+  - `GET /`
+  - `GET /health`
+- Persistent disks:
+  - `/data/auth` for `LocalAuth`
+  - `/data/storage` for JSON data
+
+### Render deployment checklist
+
+1. Confirm `render.yaml` is present in the repository root.
+2. Confirm `buildCommand` is `npm install`.
+3. Confirm `startCommand` is `npm start`.
+4. Confirm `NODE_ENV` and `SESSION_NAME` are set in Render.
+5. Confirm `healthCheckPath` is `/health`.
+6. Scan the QR code from `/qr` on first startup.
+7. Verify auth files are written under `/data/auth`.
+8. Verify JSON files are written under `/data/storage`.
+
+### Troubleshooting
+
+- If the service fails to start, check Render logs for `Bot starting...` and `Failed to initialize client`.
+- If QR does not appear, verify Chromium is available and `PUPPETEER_EXECUTABLE_PATH` or `CHROMIUM_PATH` points to a valid binary.
+- If authentication fails, ensure the `/data/auth` disk is mounted and writable.
+- If bot data is missing after restart, ensure `/data/storage` is mounted and `DATA_DIR` is set to `/data/storage`.
+- If health check fails, confirm `/health` returns `{ status: 'ok' }` and `/` returns bot status.
+
+---
+
 ## Folder Structure
 
 ```
