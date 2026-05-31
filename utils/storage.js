@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const DATA_DIR = process.env.DATA_DIR || '/tmp/storage';
+const DATA_DIR = process.env.DATA_DIR || './data';
 
 function filePath(name) {
   return path.join(DATA_DIR, `${name}.json`);

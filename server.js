@@ -1,6 +1,5 @@
 require('dotenv').config();
 const { Client, LocalAuth } = require('whatsapp-web.js');
-const puppeteer = require('puppeteer');
 const qrcode = require('qrcode-terminal');
 const QRCode = require('qrcode');
 const express = require('express');
@@ -8,7 +7,6 @@ const fs = require('fs');
 const path = require('path');
 
 let currentQR = null;
-let hasConnectedBefore = false;
 
 const sessionMgr = require('./utils/session');
 const storage = require('./utils/storage');
@@ -22,45 +20,15 @@ const buyer = require('./flows/buyer');
 const marketplace = require('./flows/marketplace');
 const education = require('./flows/education');
 
-const DATA_DIR = process.env.DATA_DIR || '/tmp/storage';
-const AUTH_DIR = process.env.AUTH_DIR || '/tmp/auth';
-const PORT = process.env.PORT || 3000;
-
-function findChromiumPath() {
-  const candidates = [
-    process.env.CHROMIUM_PATH,
-    process.env.PUPPETEER_EXECUTABLE_PATH,
-    process.env.CHROME_BIN,
-    '/usr/bin/chromium-browser',
-    '/usr/bin/chromium',
-    '/usr/bin/google-chrome-stable',
-    '/usr/bin/google-chrome'
-  ].filter(Boolean);
-
-  for (const candidate of candidates) {
-    if (fs.existsSync(candidate)) return candidate;
-  }
-
-  try {
-    const executablePath = puppeteer.executablePath();
-    if (executablePath && fs.existsSync(executablePath)) return executablePath;
-  } catch (_) {}
-
-  return null;
-}
-
-function ensureDirectory(dir) {
+// ── Ensure data + auth directories exist ─────────────────────────────────────
+['./data', './auth', './assets/images', './assets/certificates'].forEach(dir => {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-}
-
-const chromiumPath = findChromiumPath();
-
-['./assets/images', './assets/certificates', DATA_DIR, AUTH_DIR].forEach(ensureDirectory);
+});
 
 // ── Ensure JSON data files exist ─────────────────────────────────────────────
 const dataFiles = ['users', 'collectors', 'buyers', 'pickups', 'listings', 'offers', 'transactions', 'certificates', 'notifications'];
 dataFiles.forEach(name => {
-  const fp = path.join(DATA_DIR, `${name}.json`);
+  const fp = path.join('./data', `${name}.json`);
   if (!fs.existsSync(fp)) fs.writeFileSync(fp, '[]', 'utf8');
 });
 
@@ -147,38 +115,30 @@ app.listen(PORT, () => {
 });
 
 // ── WhatsApp Client Setup ─────────────────────────────────────────────────────
-const puppeteerOptions = {
-  headless: true,
-  args: [
-    '--no-sandbox',
-    '--disable-setuid-sandbox',
-    '--disable-dev-shm-usage',
-    '--disable-accelerated-2d-canvas',
-    '--no-first-run',
-    '--no-zygote',
-    '--single-process',
-    '--disable-gpu'
-  ]
-};
-
-if (chromiumPath) {
-  puppeteerOptions.executablePath = chromiumPath;
-} else {
-  console.warn('⚠️ Chromium executable path not detected. Puppeteer will use the default browser path.');
-}
-
 const client = new Client({
   authStrategy: new LocalAuth({
     clientId: process.env.SESSION_NAME || 'ecosort-session',
-    dataPath: AUTH_DIR
+    dataPath: process.env.AUTH_DIR || './auth'
   }),
-  puppeteer: puppeteerOptions
+  puppeteer: {
+    headless: true,
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-accelerated-2d-canvas',
+      '--no-first-run',
+      '--no-zygote',
+      '--single-process',
+      '--disable-gpu'
+    ]
+  }
 });
 
 // ── QR Code ───────────────────────────────────────────────────────────────────
 client.on('qr', (qr) => {
   currentQR = qr;
-  console.log('📷 QR generated and ready for scan.');
+  const PORT = process.env.PORT || 3000;
   console.log('\n📱 QR code ready! Open this URL in your browser to scan:\n');
   console.log(`   👉  http://localhost:${PORT}/qr\n`);
   console.log('(Or scan the terminal QR below if you prefer)\n');
@@ -199,17 +159,8 @@ client.on('auth_failure', (msg) => {
 
 client.on('ready', () => {
   global.botReady = true;
-  if (hasConnectedBefore) {
-    console.log('\n✅ Reconnected and ready! EcoSort WhatsApp Bot is LIVE again.');
-  } else {
-    console.log('\n🚀 EcoSort WhatsApp Bot is LIVE and ready!');
-    hasConnectedBefore = true;
-  }
+  console.log('\n🚀 EcoSort WhatsApp Bot is LIVE and ready!');
   console.log('📲 People can now message this number anytime.\n');
-});
-
-client.on('reconnecting', () => {
-  console.log('🔄 Reconnected event detected — attempting to restore the WhatsApp session.');
 });
 
 // ── Disconnection + auto-reconnect ────────────────────────────────────────────
@@ -398,14 +349,9 @@ client.on('message', async (message) => {
 });
 
 // ── Start Client ──────────────────────────────────────────────────────────────
-console.log('\n🌿 Bot starting...');
-console.log(`📁 Auth directory: ${AUTH_DIR}`);
-console.log(`📦 Storage directory: ${DATA_DIR}`);
-if (chromiumPath) {
-  console.log(`🧠 Chromium path: ${chromiumPath}`);
-} else {
-  console.warn('⚠️ Chromium path not found. Puppeteer will attempt its default browser path.');
-}
+console.log('\n🌿 Starting EcoSort WhatsApp Bot...');
+console.log('📁 Auth directory:', process.env.AUTH_DIR || './auth');
+console.log('📦 Data directory:', process.env.DATA_DIR || './data');
 
 client.initialize().catch(err => {
   console.error('❌ Failed to initialize client:', err);

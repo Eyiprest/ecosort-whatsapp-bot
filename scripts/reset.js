@@ -4,11 +4,10 @@ const fs = require('fs');
 const path = require('path');
 
 const dataFiles = ['users', 'collectors', 'buyers', 'pickups', 'listings', 'offers', 'transactions', 'certificates', 'notifications'];
-const DATA_DIR = process.env.DATA_DIR || '/data/storage';
+const DATA_DIR = './data';
 
 dataFiles.forEach(name => {
   const fp = path.join(DATA_DIR, `${name}.json`);
-  fs.mkdirSync(DATA_DIR, { recursive: true });
   fs.writeFileSync(fp, '[]', 'utf8');
   console.log(`✅ Reset: ${fp}`);
 });

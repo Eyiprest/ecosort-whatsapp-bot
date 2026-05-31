@@ -167,51 +167,6 @@ If the first reconnect fails, it retries after 30 seconds. The session cookie is
 
 ---
 
-## Render Deployment
-
-This project is configured for Render free tier and works without paid disk mounts.
-
-- Build Command: `npm install`
-- Start Command: `npm start`
-- Environment Variables:
-  - `NODE_ENV=production`
-  - `SESSION_NAME=ecosort-session`
-  - `AUTH_DIR=/tmp/auth`
-  - `DATA_DIR=/tmp/storage`
-- Health endpoints:
-  - `GET /`
-  - `GET /health`
-- Storage paths:
-  - `/tmp/auth` for `LocalAuth`
-  - `/tmp/storage` for JSON data
-
-### Render free tier notes
-
-- The free tier uses ephemeral storage, so `auth` and bot data are not persisted across deploys or long-term restarts.
-- The bot will still deploy and work on Render free tier, but QR re-scan may be required after redeploy or service restart.
-- For persistent session storage, upgrade to a paid Render plan or attach a disk.
-
-### Render deployment checklist
-
-1. Confirm `render.yaml` is present in the repository root.
-2. Confirm `buildCommand` is `npm install`.
-3. Confirm `startCommand` is `npm start`.
-4. Confirm `NODE_ENV`, `SESSION_NAME`, `AUTH_DIR`, and `DATA_DIR` are set in Render.
-5. Confirm `healthCheckPath` is `/health`.
-6. Scan the QR code from `/qr` on first startup.
-7. Verify auth files are written under `/tmp/auth`.
-8. Verify JSON files are written under `/tmp/storage`.
-
-### Troubleshooting
-
-- If the service fails to start, check Render logs for `Bot starting...` and `Failed to initialize client`.
-- If QR does not appear, verify Chromium is available and `PUPPETEER_EXECUTABLE_PATH` or `CHROMIUM_PATH` points to a valid binary.
-- If authentication fails, ensure `/tmp/auth` is writable.
-- If bot data is missing after restart, understand that Render free tier storage is ephemeral and may reset on service restart.
-- If health check fails, confirm `/health` returns `{ status: 'ok' }` and `/` returns bot status.
-
----
-
 ## Folder Structure
 
 ```
