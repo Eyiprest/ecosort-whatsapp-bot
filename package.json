@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "reset": "node scripts/reset.js"
+    "reset": "node scripts/reset.js",
+    "test:message": "node scripts/test_message.js"
   },
   "engines": {
     "node": ">=18.0.0"

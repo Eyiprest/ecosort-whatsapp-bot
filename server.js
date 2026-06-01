@@ -342,7 +342,11 @@ async function startSock() {
           body: (text || '').trim(),
           fromMe: false,
           reply: async (txt) => {
-            try { await client.sendMessage(`${phone}@c.us`, { text: txt }); } catch (e) { console.error('Reply failed', e.message); }
+            try {
+              await sock.sendMessage(jid, { text: txt });
+            } catch (e) {
+              console.error('Reply failed', e.message);
+            }
           }
         };
 
