@@ -124,10 +124,12 @@ app.get('/qr', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`🌐 EcoSort health server running on port ${PORT}`);
-  console.log(`📷 Open http://localhost:${PORT}/qr in your browser to scan the QR code`);
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`🌐 EcoSort health server running on port ${PORT}`);
+    console.log(`📷 Open http://localhost:${PORT}/qr in your browser to scan the QR code`);
+  });
+}
 
 // ── Baileys (WebSocket) Client Setup ──────────────────────────────────────────
 // Support seeding auth from environment (process.env.BAILEYS_AUTH) which should be
@@ -310,6 +312,7 @@ async function startSock() {
 
   // Incoming messages (compat layer)
   sock.ev.on('messages.upsert', async (m) => {
+    console.log(`📥 WhatsApp message event: type=${m.type}, count=${m.messages ? m.messages.length : 0}`);
     if (m.type !== 'notify') return;
     for (const msg of m.messages) {
       if (!msg.message) continue;
@@ -514,14 +517,16 @@ async function handleIncomingMessage(message) {
 }
 
 // ── Start Client ──────────────────────────────────────────────────────────────
-console.log('\n🌿 Starting EcoSort WhatsApp Bot...');
-console.log('🔐 Auth directory:', AUTH_DIR);
-console.log('📦 Data directory:', process.env.DATA_DIR || './data');
+if (require.main === module) {
+  console.log('\n🌿 Starting EcoSort WhatsApp Bot...');
+  console.log('🔐 Auth directory:', AUTH_DIR);
+  console.log('📦 Data directory:', process.env.DATA_DIR || './data');
 
-startSock().catch(err => {
-  console.error('❌ Failed to start Baileys socket:', err);
-  scheduleReconnect(10000);
-});
+  startSock().catch(err => {
+    console.error('❌ Failed to start Baileys socket:', err);
+    scheduleReconnect(10000);
+  });
+}
 
 // ── Graceful shutdown ─────────────────────────────────────────────────────────
 process.on('SIGTERM', async () => {
