@@ -316,6 +316,12 @@ async function startSock() {
     if (m.type !== 'notify') return;
     for (const msg of m.messages) {
       if (!msg.message) continue;
+      const preview = msg.message.conversation
+        || (msg.message.extendedTextMessage && msg.message.extendedTextMessage.text)
+        || (msg.message.imageMessage && msg.message.imageMessage.caption)
+        || (msg.message.videoMessage && msg.message.videoMessage.caption)
+        || '[non-text message]';
+      console.log(`🔎 Message key: fromMe=${!!msg.key.fromMe}, remoteJid=${msg.key.remoteJid || 'unknown'}, participant=${msg.key.participant || 'none'}, text=${preview}`);
       if (msg.key && msg.key.fromMe) {
         console.log('↩️ Ignoring message sent from the bot WhatsApp account');
         continue;
