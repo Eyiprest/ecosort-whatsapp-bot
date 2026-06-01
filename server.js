@@ -207,10 +207,15 @@ async function ensureAuthState() {
 
 let sock = null;
 let client = null; // compatibility wrapper used by flow modules
+let reconnectTimer = null;
 
 const waLogger = pino({ level: process.env.WA_LOG_LEVEL || 'silent' });
 
 async function startSock() {
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
   const { version } = await fetchLatestBaileysVersion().catch(() => ({ version: [2, 2204, 13] }));
   await ensureAuthState();
   sock = makeWASocket({ logger: waLogger, printQRInTerminal: false, auth: authState.state, version });
@@ -269,6 +274,13 @@ async function startSock() {
         try { fs.rmSync(AUTH_DIR, { recursive: true, force: true }); } catch (_) {}
         process.exit(0);
       }
+
+      console.log('🔄 Reconnecting WhatsApp socket in 5 seconds...');
+      reconnectTimer = setTimeout(() => {
+        startSock().catch(err => {
+          console.error('❌ Reconnect failed:', err.message);
+        });
+      }, 5000);
     }
   });
 
@@ -486,14 +498,12 @@ startSock().catch(err => {
 // ── Graceful shutdown ─────────────────────────────────────────────────────────
 process.on('SIGTERM', async () => {
   console.log('🛑 SIGTERM received — shutting down gracefully...');
-  try { if (sock && sock.logout) await sock.logout(); } catch (_) {}
   try { if (sock && sock.end) await sock.end(); } catch (_) {}
   process.exit(0);
 });
 
 process.on('SIGINT', async () => {
   console.log('\n🛑 Stopping EcoSort bot...');
-  try { if (sock && sock.logout) await sock.logout(); } catch (_) {}
   try { if (sock && sock.end) await sock.end(); } catch (_) {}
   process.exit(0);
 });
