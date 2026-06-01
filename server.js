@@ -313,6 +313,10 @@ async function startSock() {
     if (m.type !== 'notify') return;
     for (const msg of m.messages) {
       if (!msg.message) continue;
+      if (msg.key && msg.key.fromMe) {
+        console.log('↩️ Ignoring message sent from the bot WhatsApp account');
+        continue;
+      }
       if (msg.key && msg.key.remoteJid && msg.key.participant === undefined && !msg.key.fromMe) {
         const jid = msg.key.remoteJid; // e.g., 234812...@s.whatsapp.net
         // Extract textual content from various message types
