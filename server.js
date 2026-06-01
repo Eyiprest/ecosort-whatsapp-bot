@@ -155,6 +155,15 @@ function writeAuthKeyDir(baseDir, keys) {
 function writeAuthStateFromEnv(authDir, base64String) {
   const payload = JSON.parse(Buffer.from(base64String, 'base64').toString('utf8'));
   ensureDir(authDir);
+  if (payload.files) {
+    for (const [name, value] of Object.entries(payload.files)) {
+      const nextPath = path.join(authDir, name);
+      ensureDir(path.dirname(nextPath));
+      fs.writeFileSync(nextPath, value, 'utf8');
+    }
+    return;
+  }
+
   if (payload.creds) {
     fs.writeFileSync(path.join(authDir, 'creds.json'), JSON.stringify(payload.creds, null, 2), 'utf8');
   }
@@ -166,7 +175,16 @@ function writeAuthStateFromEnv(authDir, base64String) {
 }
 
 function packAuthDir(authDir) {
-  const result = {};
+  const result = { files: {} };
+  if (!fs.existsSync(authDir)) return result;
+
+  for (const name of fs.readdirSync(authDir)) {
+    const nextPath = path.join(authDir, name);
+    if (fs.statSync(nextPath).isFile()) {
+      result.files[name] = fs.readFileSync(nextPath, 'utf8');
+    }
+  }
+
   const credsPath = path.join(authDir, 'creds.json');
   if (fs.existsSync(credsPath)) {
     result.creds = JSON.parse(fs.readFileSync(credsPath, 'utf8'));
@@ -210,6 +228,18 @@ let client = null; // compatibility wrapper used by flow modules
 let reconnectTimer = null;
 
 const waLogger = pino({ level: process.env.WA_LOG_LEVEL || 'silent' });
+
+function scheduleReconnect(delayMs = 5000) {
+  if (reconnectTimer) return;
+  console.log(`🔄 Reconnecting WhatsApp socket in ${Math.round(delayMs / 1000)} seconds...`);
+  reconnectTimer = setTimeout(() => {
+    startSock().catch(err => {
+      console.error('❌ Reconnect failed:', err.message);
+      reconnectTimer = null;
+      scheduleReconnect(10000);
+    });
+  }, delayMs);
+}
 
 async function startSock() {
   if (reconnectTimer) {
@@ -272,15 +302,9 @@ async function startSock() {
       if (isLogout) {
         console.log('🗑️  Logged out. Clearing local auth state; restart to generate a new QR.');
         try { fs.rmSync(AUTH_DIR, { recursive: true, force: true }); } catch (_) {}
-        process.exit(0);
       }
 
-      console.log('🔄 Reconnecting WhatsApp socket in 5 seconds...');
-      reconnectTimer = setTimeout(() => {
-        startSock().catch(err => {
-          console.error('❌ Reconnect failed:', err.message);
-        });
-      }, 5000);
+      scheduleReconnect(5000);
     }
   });
 
@@ -492,7 +516,7 @@ console.log('📦 Data directory:', process.env.DATA_DIR || './data');
 
 startSock().catch(err => {
   console.error('❌ Failed to start Baileys socket:', err);
-  process.exit(1);
+  scheduleReconnect(10000);
 });
 
 // ── Graceful shutdown ─────────────────────────────────────────────────────────
