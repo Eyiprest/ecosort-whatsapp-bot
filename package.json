@@ -12,12 +12,13 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.23",
+    "pino": "^8.14.0",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "qrcode": "^1.5.4",
     "qrcode-terminal": "^0.12.0",
-    "uuid": "^9.0.0",
-    "whatsapp-web.js": "^1.23.0"
+    "uuid": "^9.0.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"

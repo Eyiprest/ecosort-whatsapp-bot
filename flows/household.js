@@ -2,6 +2,7 @@ const session = require('../utils/session');
 const storage = require('../utils/storage');
 const { msg } = require('../utils/messages');
 const { generateEcoId, generateId, timestamp, formatDate, pickupStatus, materialEmoji, updateStreak } = require('../utils/helpers');
+const crypto = require('crypto');
 const { isValidPhone, isValidName, isMenuChoice, getMenuChoice, isPositiveNumber } = require('../utils/validators');
 
 const WASTE_TYPES = ['PET Bottles', 'Aluminum Cans', 'Nylon/Plastic bags', 'HDPE (Jerry cans)', 'Cartons/Paper', 'Mixed Recyclables'];
@@ -127,6 +128,12 @@ async function handlePickupRequest(client, message, phone, sess) {
         createdAt: timestamp(),
         updatedAt: timestamp()
       };
+      // Generate cryptographically secure confirmation code (2-hour TTL)
+      try {
+        const code = crypto.randomBytes(6).toString('hex').toUpperCase();
+        const expiresAt = new Date(Date.now() + (2 * 60 * 60 * 1000)).toISOString();
+        pickup.confirmation = { code, expiresAt };
+      } catch (_) {}
       storage.insert('pickups', pickup);
 
       if (user) {
@@ -147,6 +154,13 @@ async function handlePickupRequest(client, message, phone, sess) {
               : `🚛 *New Pickup Request!*\n\nPickup ID: ${pickupId}\nUser: ${user ? user.name : 'User'}\nWaste: ${d.pickupWaste}\nBags: ${d.pickupBags}\nAddress: ${d.pickupAddress}\nTime: ${body}\n\nType *2* from your dashboard to accept.`
           );
         } catch (_) {}
+      }
+      // Notify user with confirmation code + points preview
+      if (pickup.confirmation) {
+        const codeMsg = lang === 'pid'
+          ? `🔐 Your Pickup Confirmation Code: *${pickup.confirmation.code}*\nThis code expires in 2 hours.`
+          : `🔐 Your Pickup Confirmation Code: *${pickup.confirmation.code}*\nThis code expires in 2 hours.`;
+        try { await message.reply(codeMsg); } catch (_) {}
       }
 
       session.set(phone, { step: 'household_menu' });

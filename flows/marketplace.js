@@ -68,6 +68,16 @@ async function handleCreateListing(client, message, phone, sess) {
       updatedAt: timestamp()
     };
 
+    // Safety check: if collector not FULL_COLLECTOR, require quick guides read
+    const badges = (collector && collector.badges) || [];
+    if (!badges.includes('FULL_COLLECTOR')) {
+      // Save draft temporarily in session and prompt safety confirmation
+      session.setData(phone, 'listingDraft', listing);
+      session.set(phone, { step: 'market_safety_confirm' });
+      await message.reply(`⚠️ Safety check — ${d.listMaterial}\nReply with:\n1. Post Listing\n2. Show me the safety guides`);
+      return;
+    }
+
     // Instant save — no freeze
     storage.insert('listings', listing);
 
@@ -136,6 +146,53 @@ async function handleSearch(client, message, phone, sess) {
     session.set(phone, { step: role === 'buyer' ? 'buyer_menu' : role === 'collector' ? 'collector_menu' : 'household_menu' });
     await message.reply(msg(role === 'buyer' ? 'buyerMenu' : role === 'collector' ? 'collectorMenu' : 'mainMenu', lang));
   }
+}
+
+// Handle safety confirmation step
+async function handleSafetyConfirm(client, message, phone, sess) {
+  const body = message.body.trim();
+  const lang = sess.lang;
+  const collector = storage.findOne('collectors', c => c.phone === phone);
+  const draft = sess.data.listingDraft;
+  if (!draft) { session.set(phone, { step: 'collector_menu' }); await message.reply(msg('collectorMenu', lang)); return; }
+
+  if (body === '1' || body.toLowerCase() === 'post') {
+    storage.insert('listings', draft);
+    session.set(phone, { step: 'collector_menu' });
+    await message.reply(lang === 'pid'
+      ? `✅ *Listing Published!*\n\n🆔 *${draft.id}*\n${materialEmoji(draft.material)}\n📦 ${draft.quantity}kg | ₦${draft.pricePerKg}/kg\n\nListing dey live.`
+      : `✅ *Listing Published!*\n\n🆔 *${draft.id}*\n${materialEmoji(draft.material)}\n📦 ${draft.quantity}kg | ₦${draft.pricePerKg}/kg\n\nListing is live.`);
+    await message.reply(msg('collectorMenu', lang));
+    return;
+  }
+
+  if (body === '2' || body.toLowerCase().includes('guide')) {
+    // Send three short safety guides and award FULL_COLLECTOR badge
+    const guides = [
+      `⚙️ *Metal Safety*\nUse gloves, avoid sharp edges, keep metals separate.`,
+      `🍃 *Organic / Compostable*\nBag organic waste separately; avoid liquids that contaminate recyclables.`,
+      `🔌 *E-waste Safety*\nHandle batteries carefully; store leaks in sealed bag and labelled.`
+    ];
+    for (const g of guides) {
+      try { await message.reply(g); } catch (_) {}
+    }
+    // mark collector safety read
+    const badges = (collector.badges || []);
+    if (!badges.includes('FULL_COLLECTOR')) {
+      const newBadges = [...badges, 'FULL_COLLECTOR'];
+      storage.update('collectors', c => c.phone === phone, { badges: newBadges });
+    }
+    // publish draft
+    storage.insert('listings', draft);
+    session.set(phone, { step: 'collector_menu' });
+    await message.reply(lang === 'pid'
+      ? `✅ You don read the guides. FULL_COLLECTOR badge don added. Listing published.`
+      : `✅ Guides seen. FULL_COLLECTOR badge added. Listing published.`);
+    await message.reply(msg('collectorMenu', lang));
+    return;
+  }
+
+  await message.reply(msg('invalidChoice', lang));
 }
 
 // ── MAKE OFFER ────────────────────────────────────────────────────────────────
@@ -314,6 +371,7 @@ async function handle(client, message, phone, sess) {
     return handleCreateListing(client, message, phone, sess);
   }
   if (sess.step === 'market_search') return handleSearch(client, message, phone, sess);
+  if (sess.step === 'market_safety_confirm') return handleSafetyConfirm(client, message, phone, sess);
   if (['offer_listing_id','offer_price'].includes(sess.step)) return handleOffer(client, message, phone, sess);
 }
 

@@ -19,8 +19,8 @@ Built for hackathon MVP validation. Supports households, collectors, and buyers 
 ## Stack
 
 - **Node.js** — runtime
-- **whatsapp-web.js** — WhatsApp automation (free, no API approval needed)
-- **LocalAuth** — persists session across restarts
+- **@whiskeysockets/baileys** — browserless WebSocket WhatsApp client
+- **Env-based auth** — load serialized WhatsApp session from `BAILEYS_AUTH` (base64)
 - **Express.js** — health check endpoint (required for cloud hosting)
 - **JSON files** — local storage (no database needed)
 - **Railway / Render / Koyeb** — free cloud hosting
@@ -48,7 +48,7 @@ cd "ecosort whatsapp"
 npm install
 ```
 
-> **Note:** This installs Puppeteer/Chromium (~170MB). It may take a few minutes.
+> **Note:** No Chromium required — this project uses Baileys (WebSocket). Installation is small and fast.
 
 ### Step 4 — Configure Environment
 Copy `.env.example` to `.env`:
@@ -141,14 +141,14 @@ Turn your waste into value...
 
 ## Session Persistence
 
-This bot uses **LocalAuth** from whatsapp-web.js. The WhatsApp session is saved in the `auth/` directory.
+This bot uses **Baileys** and supports loading WhatsApp auth from an environment variable named `BAILEYS_AUTH` (a base64-encoded single-file auth JSON). The project also keeps a local `auth/baileys` fallback directory for debugging and first-time setup.
 
 **What this means:**
-- ✅ Restart the server → bot reconnects automatically (no QR scan needed)
-- ✅ Deploy to cloud → session persists if `auth/` is on persistent storage
-- ✅ Power cut, crash, redeploy → reconnects within seconds
+- ✅ Restart the server → bot reconnects automatically (no QR scan needed) if `BAILEYS_AUTH` or persistent auth file is present
+- ✅ Deploy to cloud → paste the base64 auth string into your host's `BAILEYS_AUTH` env var or mount a persistent `auth/` disk
+- ✅ After the first QR scan the server prints a base64 string in logs you can copy to the `BAILEYS_AUTH` env var
 
-**First-time setup:** You must scan the QR code **once**. After that, the session is saved.
+**First-time setup:** You must scan the QR code **once**. After authentication the server will print a base64 `BAILEYS_AUTH` value in logs; save that into your host env var to avoid future scans. There's also a protected HTTP endpoint `GET /auth?token=ADMIN_TOKEN` that returns the current base64 string (set `ADMIN_TOKEN` in your env).
 
 ---
 
@@ -449,15 +449,15 @@ rm -rf auth/ && node scripts/reset.js && node server.js
 | QR code not appearing | Wait 60 seconds — Chromium is loading |
 | Bot authenticated but not replying | Check WhatsApp number format — use full number with country code |
 | Session expired | Open logs, scan new QR |
-| `puppeteer` errors on deploy | Ensure `nixpacks.toml` is in repo root (Railway) |
-| Bot disconnects frequently | Use persistent volume for `auth/` directory |
-| Railway/Render/Koyeb crashes | Check memory — Puppeteer needs ~512MB RAM minimum |
+| WebSocket / auth errors on deploy | Ensure `BAILEYS_AUTH` or persistent `auth/` disk is configured on your host |
+| Bot disconnects frequently | Use persistent volume for `auth/` directory or set `BAILEYS_AUTH` env var |
+| Railway/Render/Koyeb crashes | Check memory — free tiers may sleep; use a keep-alive ping |
 
 ---
 
 ## Architecture Notes
 
-**Session Management:** In-memory sessions (per user phone number). Sessions survive bot restarts via WhatsApp's LocalAuth, but conversation state resets on restart. For production, move session state to a file or Redis.
+**Session Management:** In-memory sessions (per user phone number). WhatsApp auth now loads from `BAILEYS_AUTH` (or local `auth/` file), but conversation state still resets on restart. For production, move session state to a file or Redis.
 
 **Offer/Accept Flow:** Collectors receive real-time WhatsApp notifications when buyers submit offers. They reply with `accept OFFER-ID` or `reject OFFER-ID` from anywhere in the chat.
 

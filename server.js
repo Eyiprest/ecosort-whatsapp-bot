@@ -1,7 +1,8 @@
 require('dotenv').config();
-const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const QRCode = require('qrcode');
+const pino = require('pino');
+const { default: makeWASocket, DisconnectReason, fetchLatestBaileysVersion, useMultiFileAuthState } = require('@whiskeysockets/baileys');
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
@@ -61,6 +62,20 @@ app.get('/stats', (req, res) => {
   });
 });
 
+// Return the current BAILEYS_AUTH base64 for easy copy into Render env.
+// Protected by ADMIN_TOKEN env var: ?token=YOUR_ADMIN_TOKEN
+app.get('/auth', (req, res) => {
+  const adminToken = process.env.ADMIN_TOKEN;
+  if (!adminToken) return res.status(403).send('Admin token not configured');
+  if (req.query.token !== adminToken) return res.status(403).send('Forbidden');
+  try {
+    const packed = packAuthDir(AUTH_DIR);
+    return res.json({ auth: Buffer.from(JSON.stringify(packed), 'utf8').toString('base64') });
+  } catch (e) {
+    return res.status(500).json({ error: 'No auth data available yet' });
+  }
+});
+
 // ── QR Code browser page ──────────────────────────────────────────────────────
 app.get('/qr', async (req, res) => {
   if (global.botReady) {
@@ -114,94 +129,184 @@ app.listen(PORT, () => {
   console.log(`📷 Open http://localhost:${PORT}/qr in your browser to scan the QR code`);
 });
 
-// ── WhatsApp Client Setup ─────────────────────────────────────────────────────
-const client = new Client({
-  authStrategy: new LocalAuth({
-    clientId: process.env.SESSION_NAME || 'ecosort-session',
-    dataPath: process.env.AUTH_DIR || './auth'
-  }),
-  puppeteer: {
-    headless: true,
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-accelerated-2d-canvas',
-      '--no-first-run',
-      '--no-zygote',
-      '--single-process',
-      '--disable-gpu'
-    ]
+// ── Baileys (WebSocket) Client Setup ──────────────────────────────────────────
+// Support seeding auth from environment (process.env.BAILEYS_AUTH) which should be
+// a base64-encoded JSON object representing the auth directory state for Baileys.
+const AUTH_DIR = process.env.AUTH_DIR || './auth/baileys';
+let authState = null;
+
+function ensureDir(dir) {
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+}
+
+function writeAuthKeyDir(baseDir, keys) {
+  ensureDir(baseDir);
+  for (const [name, value] of Object.entries(keys)) {
+    const nextPath = path.join(baseDir, name);
+    if (typeof value === 'string') {
+      ensureDir(path.dirname(nextPath));
+      fs.writeFileSync(nextPath, value, 'utf8');
+    } else {
+      writeAuthKeyDir(nextPath, value);
+    }
   }
-});
+}
 
-// ── QR Code ───────────────────────────────────────────────────────────────────
-client.on('qr', (qr) => {
-  currentQR = qr;
-  const PORT = process.env.PORT || 3000;
-  console.log('\n📱 QR code ready! Open this URL in your browser to scan:\n');
-  console.log(`   👉  http://localhost:${PORT}/qr\n`);
-  console.log('(Or scan the terminal QR below if you prefer)\n');
-  qrcode.generate(qr, { small: true });
-  console.log('\n⏳ Waiting for scan...\n');
-});
+function writeAuthStateFromEnv(authDir, base64String) {
+  const payload = JSON.parse(Buffer.from(base64String, 'base64').toString('utf8'));
+  ensureDir(authDir);
+  if (payload.creds) {
+    fs.writeFileSync(path.join(authDir, 'creds.json'), JSON.stringify(payload.creds, null, 2), 'utf8');
+  }
+  if (payload.keys) {
+    const keysDir = path.join(authDir, 'keys');
+    fs.rmSync(keysDir, { recursive: true, force: true });
+    writeAuthKeyDir(keysDir, payload.keys);
+  }
+}
 
-// ── Auth events ───────────────────────────────────────────────────────────────
-client.on('authenticated', () => {
-  currentQR = null;
-  console.log('✅ WhatsApp authenticated! Session saved.');
-});
+function packAuthDir(authDir) {
+  const result = {};
+  const credsPath = path.join(authDir, 'creds.json');
+  if (fs.existsSync(credsPath)) {
+    result.creds = JSON.parse(fs.readFileSync(credsPath, 'utf8'));
+  }
+  const keysDir = path.join(authDir, 'keys');
+  function packDir(dir) {
+    const output = {};
+    if (!fs.existsSync(dir)) return output;
+    for (const name of fs.readdirSync(dir)) {
+      const nextPath = path.join(dir, name);
+      if (fs.statSync(nextPath).isDirectory()) output[name] = packDir(nextPath);
+      else output[name] = fs.readFileSync(nextPath, 'utf8');
+    }
+    return output;
+  }
+  result.keys = packDir(keysDir);
+  return result;
+}
 
-client.on('auth_failure', (msg) => {
-  console.error('❌ Auth failure:', msg);
-  console.log('🔄 Will retry...');
-});
+async function ensureAuthState() {
+  ensureDir(AUTH_DIR);
+  const authDirContents = fs.readdirSync(AUTH_DIR).filter(name => name !== '.' && name !== '..');
+  const authDirHasAuthFiles = fs.existsSync(path.join(AUTH_DIR, 'creds.json')) && fs.existsSync(path.join(AUTH_DIR, 'keys'));
+  if (authDirContents.length > 0 && !authDirHasAuthFiles) {
+    console.warn(`⚠️ Auth directory ${AUTH_DIR} exists but does not appear to contain valid Baileys auth state. Use a clean directory or set AUTH_DIR to a dedicated auth path.`);
+  }
 
-client.on('ready', () => {
-  global.botReady = true;
-  console.log('\n🚀 EcoSort WhatsApp Bot is LIVE and ready!');
-  console.log('📲 People can now message this number anytime.\n');
-});
+  if (process.env.BAILEYS_AUTH) {
+    try {
+      writeAuthStateFromEnv(AUTH_DIR, process.env.BAILEYS_AUTH);
+      console.log('✅ Seeded Baileys auth from BAILEYS_AUTH env var');
+    } catch (e) {
+      console.warn('⚠️  Failed to seed BAILEYS_AUTH env var:', e.message);
+    }
+  }
+  authState = await useMultiFileAuthState(AUTH_DIR);
+}
 
-// ── Disconnection + auto-reconnect ────────────────────────────────────────────
-client.on('disconnected', (reason) => {
-  global.botReady = false;
-  currentQR = null;
-  console.log('⚠️  Bot disconnected:', reason);
+let sock = null;
+let client = null; // compatibility wrapper used by flow modules
 
-  if (reason === 'LOGOUT') {
-    // LOGOUT means WhatsApp rejected or the session was explicitly ended.
-    // Clear the auth folder so a fresh QR is generated on restart.
-    console.log('🗑️  Clearing auth session due to LOGOUT...');
-    const PORT = process.env.PORT || 3000;
-    setTimeout(() => {
-      try {
-        fs.rmSync(process.env.AUTH_DIR || './auth', { recursive: true, force: true });
-        console.log('✅ Auth cleared. Restart the bot with: node server.js');
-        console.log(`📷 Then open http://localhost:${PORT}/qr to scan a new QR code`);
-      } catch (e) {
-        console.log('⚠️  Could not clear auth dir automatically. Delete the auth/ folder manually, then restart.');
+const waLogger = pino({ level: process.env.WA_LOG_LEVEL || 'silent' });
+
+async function startSock() {
+  const { version } = await fetchLatestBaileysVersion().catch(() => ({ version: [2, 2204, 13] }));
+  await ensureAuthState();
+  sock = makeWASocket({ logger: waLogger, printQRInTerminal: false, auth: authState.state, version });
+
+  // Expose a minimal `client` API used by existing flows (sendMessage)
+  client = {
+    sendMessage: async (toWithAtCUs, content) => {
+      const jid = toWithAtCUs.endsWith('@c.us') ? `${toWithAtCUs.replace('@c.us','')}@s.whatsapp.net` : toWithAtCUs;
+      return sock.sendMessage(jid, content);
+    },
+    // keep socket reference for advanced uses
+    _sock: () => sock
+  };
+
+  sock.ev.on('creds.update', async () => {
+    try {
+      await authState.saveCreds();
+    } catch (e) {}
+    // Also print out a base64 copy of the auth directory state to paste into Render env
+    try {
+      const packed = packAuthDir(AUTH_DIR);
+      console.log('\n📦 Copy and paste this value into the BAILEYS_AUTH environment variable (base64):\n');
+      console.log(Buffer.from(JSON.stringify(packed), 'utf8').toString('base64'));
+      console.log('\n🔐 (This string holds your bot authentication state)\n');
+    } catch (e) {
+      console.error('⚠️ Failed to print BAILEYS_AUTH auth state:', e.message);
+    }
+  });
+
+  sock.ev.on('connection.update', (update) => {
+    const { connection, lastDisconnect, qr } = update;
+    if (qr) {
+      currentQR = qr;
+      const PORT = process.env.PORT || 3000;
+      console.log('\n📱 QR code ready! Open this URL in your browser to scan:\n');
+      console.log(`   👉  http://localhost:${PORT}/qr\n`);
+      qrcode.generate(qr, { small: true });
+    }
+
+    if (connection === 'open') {
+      currentQR = null;
+      global.botReady = true;
+      console.log('\n🚀 EcoSort WhatsApp Bot is LIVE and ready!');
+    }
+
+    if (connection === 'close') {
+      global.botReady = false;
+      currentQR = null;
+      const reason = (lastDisconnect && lastDisconnect.error && lastDisconnect.error.output) ? lastDisconnect.error.output.statusCode : 'unknown';
+      console.log('⚠️  Bot disconnected:', reason);
+      // Let Baileys attempt automatic reconnects; if the disconnect was a logout
+      // we clear the auth file so a fresh QR is required next start.
+      const isLogout = lastDisconnect && lastDisconnect.error && lastDisconnect.error.output && lastDisconnect.error.output.statusCode === DisconnectReason.loggedOut;
+      if (isLogout) {
+        console.log('🗑️  Logged out. Clearing local auth state; restart to generate a new QR.');
+        try { fs.rmSync(AUTH_DIR, { recursive: true, force: true }); } catch (_) {}
+        process.exit(0);
       }
-      process.exit(0);
-    }, 3000);
-    return;
-  }
+    }
+  });
 
-  console.log('🔄 Reconnecting in 15 seconds...');
-  setTimeout(() => {
-    console.log('🔄 Attempting reconnect...');
-    client.initialize().catch(err => {
-      console.error('❌ Reconnect failed:', err.message);
-      console.log('🔄 Retrying in 30 seconds...');
-      setTimeout(() => client.initialize().catch(e => {
-        console.error('❌ Second reconnect failed. Restart manually: node server.js');
-      }), 30000);
-    });
-  }, 15000);
-});
+  // Incoming messages (compat layer)
+  sock.ev.on('messages.upsert', async (m) => {
+    if (m.type !== 'notify') return;
+    for (const msg of m.messages) {
+      if (!msg.message) continue;
+      if (msg.key && msg.key.remoteJid && msg.key.participant === undefined && !msg.key.fromMe) {
+        const jid = msg.key.remoteJid; // e.g., 234812...@s.whatsapp.net
+        // Extract textual content from various message types
+        let text = '';
+        const messageContent = msg.message;
+        if (messageContent.conversation) text = messageContent.conversation;
+        else if (messageContent.extendedTextMessage && messageContent.extendedTextMessage.text) text = messageContent.extendedTextMessage.text;
+        else if (messageContent.imageMessage && messageContent.imageMessage.caption) text = messageContent.imageMessage.caption;
+        else if (messageContent.videoMessage && messageContent.videoMessage.caption) text = messageContent.videoMessage.caption;
 
-// ── Message Handler ───────────────────────────────────────────────────────────
-client.on('message', async (message) => {
+        const phone = jid.split('@')[0];
+        const compatMsg = {
+          from: `${phone}@c.us`,
+          body: (text || '').trim(),
+          fromMe: false,
+          reply: async (txt) => {
+            try { await client.sendMessage(`${phone}@c.us`, { text: txt }); } catch (e) { console.error('Reply failed', e.message); }
+          }
+        };
+
+        // Call the existing message handling logic by emitting a synthetic event
+        try { await handleIncomingMessage(compatMsg); } catch (e) { console.error('Handler error:', e); }
+      }
+    }
+  });
+
+}
+
+// ── Message Handler (compat) ────────────────────────────────────────────────
+async function handleIncomingMessage(message) {
   try {
     // Ignore group messages, status updates, and self-messages
     if (message.from === 'status@broadcast') return;
@@ -244,6 +349,26 @@ client.on('message', async (message) => {
     if (lBody.startsWith('accept ') || lBody.startsWith('reject ')) {
       const handled = await marketplace.handleOfferResponse(client, message, phone, sess);
       if (handled) return;
+    }
+
+    // Confirm pickup by code: `confirm CODE`
+    if (lBody.startsWith('confirm ')) {
+      const parts = lBody.split(' ');
+      const code = (parts[1] || '').toUpperCase();
+      if (!code) { await message.reply('❌ Please provide the confirmation code. Format: confirm CODE'); return; }
+      const pickup = storage.findOne('pickups', p => p.confirmation && p.confirmation.code === code);
+      if (!pickup) { await message.reply('❌ Confirmation code not found.'); return; }
+      const now = new Date();
+      const exp = new Date(pickup.confirmation.expiresAt);
+      if (now > exp) { await message.reply('❌ This confirmation code has expired. Please request a new pickup.'); return; }
+      // mark confirmed
+      storage.update('pickups', p => p.id === pickup.id, { status: 'confirmed', updatedAt: new Date().toISOString() });
+      await message.reply(`✅ Pickup ${pickup.id} confirmed. A collector will be notified.`);
+      // notify collector if assigned
+      if (pickup.collectorPhone) {
+        try { await client.sendMessage(`${pickup.collectorPhone}@c.us`, `✅ Pickup *${pickup.id}* confirmed by user. Proceed to collect.`); } catch (_) {}
+      }
+      return;
     }
 
     const role = sess.role;
@@ -346,27 +471,32 @@ client.on('message', async (message) => {
       await message.reply(`⚠️ Sorry, something went wrong. Please type *Hi* to restart.`);
     } catch (_) {}
   }
-});
+}
 
 // ── Start Client ──────────────────────────────────────────────────────────────
 console.log('\n🌿 Starting EcoSort WhatsApp Bot...');
-console.log('📁 Auth directory:', process.env.AUTH_DIR || './auth');
+console.log('🔐 Auth directory:', AUTH_DIR);
 console.log('📦 Data directory:', process.env.DATA_DIR || './data');
 
-client.initialize().catch(err => {
-  console.error('❌ Failed to initialize client:', err);
+startSock().catch(err => {
+  console.error('❌ Failed to start Baileys socket:', err);
   process.exit(1);
 });
 
 // ── Graceful shutdown ─────────────────────────────────────────────────────────
 process.on('SIGTERM', async () => {
   console.log('🛑 SIGTERM received — shutting down gracefully...');
-  try { await client.destroy(); } catch (_) {}
+  try { if (sock && sock.logout) await sock.logout(); } catch (_) {}
+  try { if (sock && sock.end) await sock.end(); } catch (_) {}
   process.exit(0);
 });
 
 process.on('SIGINT', async () => {
   console.log('\n🛑 Stopping EcoSort bot...');
-  try { await client.destroy(); } catch (_) {}
+  try { if (sock && sock.logout) await sock.logout(); } catch (_) {}
+  try { if (sock && sock.end) await sock.end(); } catch (_) {}
   process.exit(0);
 });
+
+// Export for testing harnesses
+module.exports = { startSock, handleIncomingMessage };

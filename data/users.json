@@ -32,5 +32,21 @@
     "totalPickups": 1,
     "verified": false,
     "registeredAt": "2026-05-29T20:36:31.708Z"
+  },
+  {
+    "id": "ECO-HH-003",
+    "phone": "2348010000000",
+    "name": "Amina Yusuf",
+    "userPhone": "08010000000",
+    "lga": "Alimosho",
+    "primaryWaste": "Aluminum Cans",
+    "lang": "en",
+    "points": 0,
+    "badges": [],
+    "streak": 0,
+    "lastActiveDate": null,
+    "totalPickups": 0,
+    "verified": false,
+    "registeredAt": "2026-06-01T11:05:36.941Z"
   }
 ]
