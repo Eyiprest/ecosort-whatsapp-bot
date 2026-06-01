@@ -158,14 +158,18 @@ function writeAuthStateFromEnv(authDir, base64String) {
   const payload = JSON.parse(Buffer.from(base64String, 'base64').toString('utf8'));
   ensureDir(authDir);
   if (payload.files) {
+    let fileCount = 0;
     for (const [name, value] of Object.entries(payload.files)) {
       const nextPath = path.join(authDir, name);
       ensureDir(path.dirname(nextPath));
       fs.writeFileSync(nextPath, value, 'utf8');
+      fileCount += 1;
     }
+    console.log(`✅ Restored ${fileCount} Baileys auth files from BAILEYS_AUTH`);
     return;
   }
 
+  console.warn('⚠️ BAILEYS_AUTH is using the old incomplete format. Re-scan QR and save a fresh auth value.');
   if (payload.creds) {
     fs.writeFileSync(path.join(authDir, 'creds.json'), JSON.stringify(payload.creds, null, 2), 'utf8');
   }
