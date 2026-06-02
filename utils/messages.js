@@ -1003,7 +1003,245 @@ How I fit help you?
 3️⃣ How rewards work
 4️⃣ How selling works
 5️⃣ Contact support
-6️⃣ ⬅️ Back to menu
+6️⃣ Back to menu
+
+_Reply with number_`
+  },
+
+  pickupsWork: {
+    en: `*How Pickups Work*
+
+Step-by-step:
+1. Request a pickup from your dashboard
+2. Select waste type and quantity
+3. Choose preferred day and time
+4. A collector will be assigned
+5. Get notification when they're on the way
+6. Pickup completed and points earned!
+
+You get 10 points per pickup request and 20 points when completed.
+
+Reply with:
+1️⃣ Back to help
+
+_Reply with 1_`,
+    pid: `*How Pickups Work*
+
+Step by step:
+1. Request pickup from your dashboard
+2. Select waste type and quantity
+3. Choose preferred day and time
+4. We go assign collector for you
+5. Get notification when collector coming
+6. Pickup don finish and you earn points!
+
+You get 10 points per pickup request and 20 points when finish.
+
+Reply with:
+1️⃣ Back to help
+
+_Reply with 1_`
+  },
+
+  pointsWork: {
+    en: `*How Points Work*
+
+Earn points by:
+• Request pickup: 10 points
+• Complete pickup: 20 points
+• Quiz completion: 50 points
+• Refer a friend: 25 points
+• Community actions: 20 points
+
+Monthly bonuses:
+• Top 10 users get extra 100 points
+• Active streak (3+ days): +10 points/day
+
+Use points to get rewards!
+No expiry date.
+
+Reply with:
+1️⃣ Back to help
+
+_Reply with 1_`,
+    pid: `*How Points Work*
+
+Earn points by:
+• Request pickup: 10 points
+• Complete pickup: 20 points
+• Quiz completion: 50 points
+• Refer friend: 25 points
+• Community actions: 20 points
+
+Monthly bonus:
+• Top 10 users get extra 100 points
+• Active streak (3+ days): +10 points/day
+
+Use points to get rewards!
+No expiry.
+
+Reply with:
+1️⃣ Back to help
+
+_Reply with 1_`
+  },
+
+  rewardsWork: {
+    en: `*How Rewards Work*
+
+Redeem your points for:
+✓ 500 points = ₦500 Airtime
+✓ 1000 points = 1GB Data Bundle
+✓ 2500 points = ₦2,500 Voucher
+✓ 5000 points = Premium Membership
+
+How to redeem:
+1. Go to Rewards from menu
+2. Select reward you want
+3. Submit request
+4. We process within 24 hours
+5. You receive reward on WhatsApp
+
+No waiting list — first come, first served!
+
+Reply with:
+1️⃣ Back to help
+
+_Reply with 1_`,
+    pid: `*How Rewards Work*
+
+Redeem your points for:
+✓ 500 points = ₦500 Airtime
+✓ 1000 points = 1GB Data Bundle
+✓ 2500 points = ₦2,500 Voucher
+✓ 5000 points = Premium Membership
+
+How to redeem:
+1. Go to Rewards from menu
+2. Select reward you want
+3. Submit request
+4. We process within 24 hours
+5. You get reward on WhatsApp
+
+No waiting list — first come, first served!
+
+Reply with:
+1️⃣ Back to help
+
+_Reply with 1_`
+  },
+
+  sellingWorks: {
+    en: `*How Selling Works (Collectors)*
+
+As a collector you can:
+• Accept available pickups
+• Collect waste from households
+• Sell materials to buyers
+• Build inventory
+
+Commission rates:
+• 15% on each pickup completed
+• 10% when selling to marketplace
+• Bonus for quality (clean materials)
+
+Your earnings:
+• View anytime from dashboard
+• Withdraw weekly via bank transfer
+• Instant payouts on verified account
+
+Reply with:
+1️⃣ Back to help
+
+_Reply with 1_`,
+    pid: `*How Selling Works (Collectors)*
+
+As collector you fit:
+• Accept available pickup
+• Collect waste from house
+• Sell materials to buyer
+• Build your inventory
+
+Commission rates:
+• 15% on each pickup done
+• 10% when selling to marketplace
+• Bonus for clean materials
+
+Your earnings:
+• Check anytime from dashboard
+• Withdraw weekly via bank transfer
+• Instant payout on verified account
+
+Reply with:
+1️⃣ Back to help
+
+_Reply with 1_`
+  },
+
+  contactSupport: {
+    en: `*Contact Support*
+
+We're here to help!
+
+📧 Email: support@ecosort.com
+📱 WhatsApp: +2348012345678
+🕐 Hours: 8am - 6pm (Mon-Fri)
+
+Common issues:
+• Pickup not arriving? Reply with photo
+• Points not showing? We'll investigate
+• Rewards not received? Contact support
+
+Or reply here and we'll respond within 1 hour.
+
+Reply with:
+1️⃣ Back to help
+
+_Reply with 1_`,
+    pid: `*Contact Support*
+
+We dey for you!
+
+📧 Email: support@ecosort.com
+📱 WhatsApp: +2348012345678
+🕐 Hours: 8am - 6pm (Mon-Fri)
+
+Common issues:
+• Pickup no show? Reply with photo
+• Points no show? We go check am
+• Reward no arrive? Contact support
+
+Or reply here and we go respond within 1 hour.
+
+Reply with:
+1️⃣ Back to help
+
+_Reply with 1_`
+  },
+
+  backToHelp: {
+    en: `📚 *EcoSort Help Center*
+
+How can we help?
+
+1️⃣ How pickups work
+2️⃣ How points work
+3️⃣ How rewards work
+4️⃣ How selling works
+5️⃣ Contact support
+6️⃣ Back to menu
+
+_Reply with number_`,
+    pid: `📚 *EcoSort Help Center*
+
+How I fit help you?
+
+1️⃣ How pickups work
+2️⃣ How points work
+3️⃣ How rewards work
+4️⃣ How selling works
+5️⃣ Contact support
+6️⃣ Back to menu
 
 _Reply with number_`
   }

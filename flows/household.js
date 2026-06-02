@@ -370,8 +370,59 @@ async function handleMyPoints(client, message, phone, sess) {
 
 async function handleHelp(client, message, phone, sess) {
   const lang = sess.lang;
-  await message.reply(msg('helpCenter.main', lang));
-  session.set(phone, { step: 'household_menu' });
+  const body = message.body.trim();
+
+  if (sess.step === 'help_menu') {
+    if (!isMenuChoice(body, 6)) {
+      await message.reply(msg('invalidChoice', lang));
+      await message.reply(msg('helpCenter.main', lang));
+      return;
+    }
+    const choice = getMenuChoice(body);
+    switch (choice) {
+      case 1:
+        await message.reply(msg('helpCenter.pickupsWork', lang));
+        session.set(phone, { step: 'help_topic' });
+        return;
+      case 2:
+        await message.reply(msg('helpCenter.pointsWork', lang));
+        session.set(phone, { step: 'help_topic' });
+        return;
+      case 3:
+        await message.reply(msg('helpCenter.rewardsWork', lang));
+        session.set(phone, { step: 'help_topic' });
+        return;
+      case 4:
+        await message.reply(msg('helpCenter.sellingWorks', lang));
+        session.set(phone, { step: 'help_topic' });
+        return;
+      case 5:
+        await message.reply(msg('helpCenter.contactSupport', lang));
+        session.set(phone, { step: 'help_topic' });
+        return;
+      case 6:
+        session.set(phone, { step: 'household_menu' });
+        await message.reply(msg('mainMenu', lang));
+        return;
+    }
+  }
+
+  if (sess.step === 'help_topic') {
+    if (body === '1' || body === '1️⃣') {
+      await message.reply(msg('helpCenter.backToHelp', lang));
+      session.set(phone, { step: 'help_menu' });
+      return;
+    }
+    await message.reply(msg('invalidChoice', lang));
+    await message.reply(msg('helpCenter.backToHelp', lang));
+    session.set(phone, { step: 'help_menu' });
+    return;
+  }
+
+  // Initial help call
+  const lang2 = sess.lang;
+  await message.reply(msg('helpCenter.main', lang2));
+  session.set(phone, { step: 'help_menu' });
 }
 
 // ── REWARDS ───────────────────────────────────────────────────────────────────
@@ -471,8 +522,18 @@ async function handle(client, message, phone, sess) {
     return handleTrackDetail(client, message, phone, sess);
   }
 
+  // Help center flow
+  if (['help_menu', 'help_topic'].includes(sess.step)) {
+    return handleHelp(client, message, phone, sess);
+  }
+
   // Dashboard menu
-  if (sess.step === 'household_menu' && isMenuChoice(rawBody, 8)) {
+  if (sess.step === 'household_menu') {
+    if (!isMenuChoice(rawBody, 8)) {
+      await message.reply(msg('invalidChoice', lang));
+      await message.reply(msg('mainMenu', lang));
+      return;
+    }
     const choice = getMenuChoice(rawBody);
     switch (choice) {
       case 1: {

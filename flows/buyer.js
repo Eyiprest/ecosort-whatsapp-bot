@@ -250,7 +250,12 @@ async function handle(client, message, phone, sess) {
     return;
   }
 
-  if (sess.step === 'buyer_menu' && isMenuChoice(rawBody, 8)) {
+  if (sess.step === 'buyer_menu') {
+    if (!isMenuChoice(rawBody, 8)) {
+      await message.reply(msg('invalidChoice', lang));
+      await message.reply(msg('buyerMenu', lang));
+      return;
+    }
     const choice = getMenuChoice(rawBody);
     switch (choice) {
       case 1: {

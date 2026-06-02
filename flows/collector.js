@@ -329,7 +329,12 @@ async function handle(client, message, phone, sess) {
     return;
   }
 
-  if (sess.step === 'collector_menu' && isMenuChoice(rawBody, 8)) {
+  if (sess.step === 'collector_menu') {
+    if (!isMenuChoice(rawBody, 8)) {
+      await message.reply(msg('invalidChoice', lang));
+      await message.reply(msg('collectorMenu', lang));
+      return;
+    }
     const choice = getMenuChoice(rawBody);
     switch (choice) {
       case 1: return viewNearbyPickups(client, message, phone, sess);
