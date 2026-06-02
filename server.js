@@ -496,13 +496,13 @@ async function handleIncomingMessage(message) {
       return marketplace.handle(client, message, phone, sess);
     }
 
-    // Marketplace listing creation steps
-    if (['market_list_material', 'market_list_qty', 'market_list_price', 'market_list_location', 'market_list_notes'].includes(step)) {
+    // Marketplace listing creation + safety confirmation
+    if (['market_list_material', 'market_list_qty', 'market_list_price', 'market_list_location', 'market_list_notes', 'market_safety_confirm'].includes(step)) {
       return marketplace.handle(client, message, phone, sess);
     }
 
-    // Offer flow
-    if (['offer_listing_id', 'offer_price', 'offer_counter', 'save_collector_id'].includes(step)) {
+    // Offer flow (buyer: save_collector_id is handled inside buyer.handle, NOT marketplace)
+    if (['offer_listing_id', 'offer_price', 'offer_counter'].includes(step)) {
       return marketplace.handle(client, message, phone, sess);
     }
 
