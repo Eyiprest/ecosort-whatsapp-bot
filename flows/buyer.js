@@ -218,6 +218,51 @@ async function viewProfile(client, message, phone, sess) {
   await message.reply(msg('buyerMenu', lang));
 }
 
+// ── HELP CENTER ───────────────────────────────────────────────────────────────
+async function handleHelp(client, message, phone, sess) {
+  const lang = sess.lang;
+  const body = message.body.trim();
+
+  if (sess.step === 'buyer_help_menu') {
+    if (!isMenuChoice(body, 6)) {
+      await message.reply(msg('invalidChoice', lang));
+      await message.reply(msg('buyerHelp.main', lang));
+      return;
+    }
+    const choice = getMenuChoice(body);
+    const topicMap = {
+      1: 'buyerHelp.findMaterials',
+      2: 'buyerHelp.makeOffers',
+      3: 'buyerHelp.howTransactions',
+      4: 'buyerHelp.esgCertificates',
+      5: 'buyerHelp.contactSupport'
+    };
+    if (choice === 6) {
+      session.set(phone, { step: 'buyer_menu' });
+      await message.reply(msg('buyerMenu', lang));
+      return;
+    }
+    await message.reply(msg(topicMap[choice], lang));
+    session.set(phone, { step: 'buyer_help_topic' });
+    return;
+  }
+
+  if (sess.step === 'buyer_help_topic') {
+    if (body === '1' || body === '1️⃣') {
+      await message.reply(msg('buyerHelp.main', lang));
+      session.set(phone, { step: 'buyer_help_menu' });
+      return;
+    }
+    await message.reply(msg('invalidChoice', lang));
+    await message.reply(msg('buyerHelp.main', lang));
+    session.set(phone, { step: 'buyer_help_menu' });
+    return;
+  }
+
+  await message.reply(msg('buyerHelp.main', lang));
+  session.set(phone, { step: 'buyer_help_menu' });
+}
+
 // ── MAIN HANDLER ──────────────────────────────────────────────────────────────
 async function handle(client, message, phone, sess) {
   const body = message.body.trim().toLowerCase();
@@ -228,6 +273,7 @@ async function handle(client, message, phone, sess) {
     return handleRegistration(client, message, phone, sess);
   }
   if (['offer_listing_id','offer_price','offer_counter'].includes(sess.step)) return handleOffer(client, message, phone, sess);
+  if (['buyer_help_menu','buyer_help_topic'].includes(sess.step)) return handleHelp(client, message, phone, sess);
   if (sess.step === 'save_collector_id') {
     if (body === 'skip') {
       session.set(phone, { step: 'buyer_menu' });
@@ -251,7 +297,7 @@ async function handle(client, message, phone, sess) {
   }
 
   if (sess.step === 'buyer_menu') {
-    if (!isMenuChoice(rawBody, 8)) {
+    if (!isMenuChoice(rawBody, 9)) {
       await message.reply(msg('invalidChoice', lang));
       await message.reply(msg('buyerMenu', lang));
       return;
@@ -281,6 +327,7 @@ async function handle(client, message, phone, sess) {
       case 6: return viewCertificates(client, message, phone, sess);
       case 7: return handleSavedCollectors(client, message, phone, sess);
       case 8: return viewProfile(client, message, phone, sess);
+      case 9: return handleHelp(client, message, phone, sess);
     }
   }
 

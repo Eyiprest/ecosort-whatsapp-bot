@@ -302,6 +302,51 @@ async function viewProfile(client, message, phone, sess) {
   await message.reply(msg('collectorMenu', lang));
 }
 
+// ── HELP CENTER ───────────────────────────────────────────────────────────────
+async function handleHelp(client, message, phone, sess) {
+  const lang = sess.lang;
+  const body = message.body.trim();
+
+  if (sess.step === 'col_help_menu') {
+    if (!isMenuChoice(body, 6)) {
+      await message.reply(msg('invalidChoice', lang));
+      await message.reply(msg('collectorHelp.main', lang));
+      return;
+    }
+    const choice = getMenuChoice(body);
+    const topicMap = {
+      1: 'collectorHelp.acceptPickups',
+      2: 'collectorHelp.completePickups',
+      3: 'collectorHelp.earningsWork',
+      4: 'collectorHelp.marketplaceWork',
+      5: 'collectorHelp.contactSupport'
+    };
+    if (choice === 6) {
+      session.set(phone, { step: 'collector_menu' });
+      await message.reply(msg('collectorMenu', lang));
+      return;
+    }
+    await message.reply(msg(topicMap[choice], lang));
+    session.set(phone, { step: 'col_help_topic' });
+    return;
+  }
+
+  if (sess.step === 'col_help_topic') {
+    if (body === '1' || body === '1️⃣') {
+      await message.reply(msg('collectorHelp.main', lang));
+      session.set(phone, { step: 'col_help_menu' });
+      return;
+    }
+    await message.reply(msg('invalidChoice', lang));
+    await message.reply(msg('collectorHelp.main', lang));
+    session.set(phone, { step: 'col_help_menu' });
+    return;
+  }
+
+  await message.reply(msg('collectorHelp.main', lang));
+  session.set(phone, { step: 'col_help_menu' });
+}
+
 // ── MAIN HANDLER ──────────────────────────────────────────────────────────────
 async function handle(client, message, phone, sess) {
   const body = message.body.trim().toLowerCase();
@@ -315,6 +360,7 @@ async function handle(client, message, phone, sess) {
   if (['col_complete_id','col_complete_material','col_complete_weight'].includes(sess.step)) {
     return handleCompletePickup(client, message, phone, sess);
   }
+  if (['col_help_menu','col_help_topic'].includes(sess.step)) return handleHelp(client, message, phone, sess);
 
   if (body === 'register') {
     const existing = storage.findOne('collectors', c => c.phone === phone);
@@ -330,7 +376,7 @@ async function handle(client, message, phone, sess) {
   }
 
   if (sess.step === 'collector_menu') {
-    if (!isMenuChoice(rawBody, 8)) {
+    if (!isMenuChoice(rawBody, 9)) {
       await message.reply(msg('invalidChoice', lang));
       await message.reply(msg('collectorMenu', lang));
       return;
@@ -356,6 +402,7 @@ async function handle(client, message, phone, sess) {
       }
       case 7: return viewEarnings(client, message, phone, sess);
       case 8: return viewProfile(client, message, phone, sess);
+      case 9: return handleHelp(client, message, phone, sess);
     }
   }
 

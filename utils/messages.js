@@ -1309,30 +1309,32 @@ const collectorMenu = {
 
 What would you like to do?
 
-1️⃣ 📬 Available Pickups
-2️⃣ ✅ Accept Pickup
-3️⃣ ✅ Complete Pickup
+1️⃣ 📋 Available Pickups
+2️⃣ 📥 Accept Pickup
+3️⃣ 📤 Complete Pickup
 4️⃣ 🗺️ My Route
 5️⃣ 📦 My Inventory
-6️⃣ 🏪 Marketplace
+6️⃣ 🛒 Marketplace
 7️⃣ 💰 My Earnings
 8️⃣ 👤 My Profile
+9️⃣ ❓ Help
 
-_Reply with number (1-8)_`,
+_Reply with number (1-9)_`,
     pid: `🚛 *Collector Dashboard*
 
 Wetin you wan do?
 
-1️⃣ 📬 Available Pickups
-2️⃣ ✅ Accept Pickup
-3️⃣ ✅ Complete Pickup
+1️⃣ 📋 Available Pickups
+2️⃣ 📥 Accept Pickup
+3️⃣ 📤 Complete Pickup
 4️⃣ 🗺️ My Route
 5️⃣ 📦 My Inventory
-6️⃣ 🏪 Marketplace
+6️⃣ 🛒 Marketplace
 7️⃣ 💰 My Earnings
 8️⃣ 👤 My Profile
+9️⃣ ❓ Help
 
-_Reply with number (1-8)_`
+_Reply with number (1-9)_`
   },
 
   availablePickups: (count) => ({
@@ -1384,13 +1386,14 @@ What would you like to do?
 1️⃣ 🔍 Search Materials
 2️⃣ 📋 Browse All Listings
 3️⃣ 💬 Make an Offer
-4️⃣ 📦 My Orders
-5️⃣ 📜 ESG Certificates
-6️⃣ ⭐ Saved Collectors
-7️⃣ 👤 My Profile
-8️⃣ ❓ Help
+4️⃣ 📦 My Offers
+5️⃣ 📊 My Transactions
+6️⃣ 🌿 ESG Certificates
+7️⃣ ⭐ Saved Collectors
+8️⃣ 👤 My Profile
+9️⃣ ❓ Help
 
-_Reply with number (1-8)_`,
+_Reply with number (1-9)_`,
     pid: `🏭 *Buyer Dashboard*
 
 Wetin you wan do?
@@ -1398,13 +1401,14 @@ Wetin you wan do?
 1️⃣ 🔍 Search Materials
 2️⃣ 📋 Browse All Listings
 3️⃣ 💬 Make an Offer
-4️⃣ 📦 My Orders
-5️⃣ 📜 ESG Certificates
-6️⃣ ⭐ Saved Collectors
-7️⃣ 👤 My Profile
-8️⃣ ❓ Help
+4️⃣ 📦 My Offers
+5️⃣ 📊 My Transactions
+6️⃣ 🌿 ESG Certificates
+7️⃣ ⭐ Saved Collectors
+8️⃣ 👤 My Profile
+9️⃣ ❓ Help
 
-_Reply with number (1-8)_`
+_Reply with number (1-9)_`
   },
 
   browseMaterials: {
@@ -1504,6 +1508,804 @@ const confirmation = {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// COLLECTOR REGISTRATION
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const collectorRegistration = {
+  namePrompt: {
+    en: `🚛 *Collector Registration*
+
+Step 1 of 5: Full Name
+
+What is your full name?
+
+_Type your name_`,
+    pid: `🚛 *Collector Registration*
+
+Step 1 of 5: Full Name
+
+Wetin be your full name?
+
+_Type your name_`
+  },
+
+  phonePrompt: {
+    en: `📞 *Your Phone Number*
+
+Step 2 of 5: Contact Number
+
+Enter your active WhatsApp phone number.
+
+Example: 08012345678
+
+_Type your number_`,
+    pid: `📞 *Your Phone Number*
+
+Step 2 of 5: Contact Number
+
+Enter your WhatsApp phone number.
+
+Example: 08012345678
+
+_Type your number_`
+  },
+
+  areaPrompt: {
+    en: `📍 *Area of Operation*
+
+Step 3 of 5: Your Zone
+
+Which area do you operate in?
+
+Examples: Ikeja, Surulere, Lekki, Oshodi
+
+_Type your area_`,
+    pid: `📍 *Area of Operation*
+
+Step 3 of 5: Your Zone
+
+Which area you dey operate?
+
+Examples: Ikeja, Surulere, Lekki, Oshodi
+
+_Type your area_`
+  },
+
+  specialtySelect: {
+    en: `♻️ *Material Specialty*
+
+Step 4 of 5: What do you collect?
+
+1️⃣ PET Bottles
+2️⃣ Metals & Aluminum
+3️⃣ Nylon & Plastics
+4️⃣ Paper & Cartons
+5️⃣ Mixed Recyclables
+6️⃣ All Materials
+
+_Reply with number_`,
+    pid: `♻️ *Material Specialty*
+
+Step 4 of 5: Wetin you dey collect?
+
+1️⃣ PET Bottles
+2️⃣ Metals & Aluminum
+3️⃣ Nylon & Plastics
+4️⃣ Paper & Cartons
+5️⃣ Mixed Recyclables
+6️⃣ All Materials
+
+_Reply with number_`
+  },
+
+  vehicleSelect: {
+    en: `🚛 *Vehicle Type*
+
+Step 5 of 5: How do you move waste?
+
+1️⃣ Motorcycle
+2️⃣ Tricycle (Keke)
+3️⃣ Pickup Truck
+4️⃣ Cart/Barrow
+5️⃣ Van
+
+_Reply with number_`,
+    pid: `🚛 *Vehicle Type*
+
+Step 5 of 5: Wetin vehicle you dey use?
+
+1️⃣ Motorcycle
+2️⃣ Tricycle (Keke)
+3️⃣ Pickup Truck
+4️⃣ Cart/Barrow
+5️⃣ Van
+
+_Reply with number_`
+  },
+
+  registrationComplete: (ecoId) => ({
+    en: `✅ *Registration Complete!*
+
+Welcome to EcoSort! 🎉
+
+Your Collector ID: *${ecoId}*
+Keep this safe — buyers use it to find you.
+
+You can now:
+• View and accept pickup requests
+• Complete pickups and update inventory
+• List materials on the marketplace
+• Track your earnings
+
+Type *menu* to open your dashboard. 🚛`,
+    pid: `✅ *Registration Don Complete!*
+
+Welcome to EcoSort! 🎉
+
+Your Collector ID: *${ecoId}*
+Keep am safe — buyers go use am to find you.
+
+You fit now:
+• View and accept pickup requests
+• Complete pickups and update inventory
+• List materials for marketplace
+• Track your earnings
+
+Type *menu* to open your dashboard. 🚛`
+  })
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// BUYER REGISTRATION
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const buyerRegistration = {
+  companyPrompt: {
+    en: `🏭 *Buyer Registration*
+
+Step 1 of 5: Company Name
+
+What is your company or organisation name?
+
+_Type your company name_`,
+    pid: `🏭 *Buyer Registration*
+
+Step 1 of 5: Company Name
+
+Wetin be your company or organisation name?
+
+_Type your company name_`
+  },
+
+  contactPrompt: {
+    en: `👤 *Contact Person*
+
+Step 2 of 5: Your Name
+
+What is the contact person's full name?
+
+_Type contact name_`,
+    pid: `👤 *Contact Person*
+
+Step 2 of 5: Your Name
+
+Wetin be your full name (contact person)?
+
+_Type contact name_`
+  },
+
+  interestSelect: {
+    en: `♻️ *Material Interest*
+
+Step 3 of 5: What do you buy?
+
+1️⃣ PET Bottles
+2️⃣ Aluminum & Metals
+3️⃣ Nylon & Plastics
+4️⃣ Paper & Cartons
+5️⃣ Mixed Recyclables
+6️⃣ All Materials
+
+_Reply with number_`,
+    pid: `♻️ *Material Interest*
+
+Step 3 of 5: Wetin material you dey find?
+
+1️⃣ PET Bottles
+2️⃣ Aluminum & Metals
+3️⃣ Nylon & Plastics
+4️⃣ Paper & Cartons
+5️⃣ Mixed Recyclables
+6️⃣ All Materials
+
+_Reply with number_`
+  },
+
+  volumeSelect: {
+    en: `📦 *Monthly Volume*
+
+Step 4 of 5: How much do you need?
+
+1️⃣ 0–1 tonne/month
+2️⃣ 1–5 tonnes/month
+3️⃣ 5–20 tonnes/month
+4️⃣ 20+ tonnes/month
+
+_Reply with number_`,
+    pid: `📦 *Monthly Volume*
+
+Step 4 of 5: How much material you need per month?
+
+1️⃣ 0–1 tonne/month
+2️⃣ 1–5 tonnes/month
+3️⃣ 5–20 tonnes/month
+4️⃣ 20+ tonnes/month
+
+_Reply with number_`
+  },
+
+  locationPrompt: {
+    en: `📍 *Company Location*
+
+Step 5 of 5: Where are you based?
+
+Enter your company city or area.
+
+Example: Lagos Island, Apapa, Kano
+
+_Type your location_`,
+    pid: `📍 *Company Location*
+
+Step 5 of 5: Where your company dey?
+
+Enter your company city or area.
+
+Example: Lagos Island, Apapa, Kano
+
+_Type your location_`
+  },
+
+  registrationComplete: (ecoId) => ({
+    en: `✅ *Registration Complete!*
+
+Welcome to EcoSort Marketplace! 🎉
+
+Your Buyer ID: *${ecoId}*
+Keep this safe for your records.
+
+You can now:
+• Browse and search material listings
+• Make offers to collectors
+• Track your purchases and transactions
+• Download ESG sustainability certificates
+
+Type *menu* to open your dashboard. 🏭`,
+    pid: `✅ *Registration Don Complete!*
+
+Welcome to EcoSort Marketplace! 🎉
+
+Your Buyer ID: *${ecoId}*
+Keep am safe for your records.
+
+You fit now:
+• Browse and search material listings
+• Make offer to collectors
+• Track your transactions
+• Get ESG sustainability certificates
+
+Type *menu* to open your dashboard. 🏭`
+  })
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// LEADERBOARD
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const leaderboard = {
+  board: (entries, userRank) => ({
+    en: `🏆 *EcoSort Leaderboard*
+
+Top Recyclers This Month:
+
+${entries}
+
+Your Rank: *#${userRank}*
+
+Keep recycling to climb higher! ♻️
+
+1️⃣ Back to Points
+2️⃣ Back to Menu
+
+_Reply with number_`,
+    pid: `🏆 *EcoSort Leaderboard*
+
+Top Recyclers This Month:
+
+${entries}
+
+Your Rank: *#${userRank}*
+
+Keep recycling to reach top! ♻️
+
+1️⃣ Back to Points
+2️⃣ Back to Menu
+
+_Reply with number_`
+  }),
+
+  empty: {
+    en: `🏆 *Leaderboard*
+
+No rankings yet — be the first!
+
+Start recycling to earn points and appear on the leaderboard.
+
+1️⃣ Back to Menu
+
+_Reply with 1_`,
+    pid: `🏆 *Leaderboard*
+
+No ranking yet — be the first!
+
+Start recycling to earn points and appear here.
+
+1️⃣ Back to Menu
+
+_Reply with 1_`
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// COLLECTOR HELP CENTER
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const collectorHelp = {
+  main: {
+    en: `🚛 *Collector Help Center*
+
+How can we help?
+
+1️⃣ How to accept pickups
+2️⃣ How to complete pickups
+3️⃣ How earnings work
+4️⃣ How marketplace works
+5️⃣ Contact support
+6️⃣ Back to menu
+
+_Reply with number_`,
+    pid: `🚛 *Collector Help Center*
+
+How I fit help you?
+
+1️⃣ How to accept pickup
+2️⃣ How to complete pickup
+3️⃣ How earnings work
+4️⃣ How marketplace work
+5️⃣ Contact support
+6️⃣ Back to menu
+
+_Reply with number_`
+  },
+
+  acceptPickups: {
+    en: `📥 *How to Accept Pickups*
+
+Step-by-step:
+1. Select "Available Pickups" to see open requests
+2. Note the Pickup ID of the one you want
+3. Select "Accept Pickup" from the menu
+4. Type the Pickup ID to claim it
+5. Navigate to the address at the agreed time
+6. Complete the pickup when done
+
+You can also reply *accept PU-XXXXXX* at any time.
+
+1️⃣ Back to help
+
+_Reply with 1_`,
+    pid: `📥 *How to Accept Pickup*
+
+Step by step:
+1. Select "Available Pickups" to see open requests
+2. Note the Pickup ID wey you want
+3. Select "Accept Pickup" from menu
+4. Type the Pickup ID to claim am
+5. Go to the address at the agreed time
+6. Complete the pickup when you done
+
+You fit also reply *accept PU-XXXXXX* anywhere.
+
+1️⃣ Back to help
+
+_Reply with 1_`
+  },
+
+  completePickups: {
+    en: `📤 *How to Complete Pickups*
+
+Step-by-step:
+1. Select "Complete Pickup" from the menu
+2. Enter the Pickup ID you collected
+3. Select the material type
+4. Enter the weight in KG
+5. Pickup is marked complete!
+
+Your earnings and inventory update automatically.
+The household gets a completion notification.
+
+1️⃣ Back to help
+
+_Reply with 1_`,
+    pid: `📤 *How to Complete Pickup*
+
+Step by step:
+1. Select "Complete Pickup" from menu
+2. Enter the Pickup ID wey you collect
+3. Choose the material type
+4. Enter weight in KG
+5. Pickup don complete!
+
+Your earnings and inventory go update automatically.
+The household go get notification.
+
+1️⃣ Back to help
+
+_Reply with 1_`
+  },
+
+  earningsWork: {
+    en: `💰 *How Earnings Work*
+
+You earn:
+• ₦50 per KG of material collected
+• Bonus rates for verified collectors
+
+Payouts:
+• View your total from the dashboard
+• Withdraw weekly via bank transfer
+• Instant payout on verified accounts
+
+To get verified:
+• Complete 5 pickups
+• Maintain 4+ star rating
+
+1️⃣ Back to help
+
+_Reply with 1_`,
+    pid: `💰 *How Earnings Work*
+
+You go earn:
+• ₦50 per KG of material wey you collect
+• Bonus rates for verified collector
+
+Payout:
+• Check your total from dashboard
+• Withdraw weekly via bank transfer
+• Instant payout on verified account
+
+To get verified:
+• Complete 5 pickups
+• Maintain 4+ star rating
+
+1️⃣ Back to help
+
+_Reply with 1_`
+  },
+
+  marketplaceWork: {
+    en: `🛒 *How Marketplace Works*
+
+Step-by-step:
+1. Collect materials from pickups
+2. Sort by type (PET, Metal, etc.)
+3. Go to Marketplace → Post Listing
+4. Enter material, quantity, and price/kg
+5. Buyers browse and send offers
+6. Accept, reject, or counter their offer
+7. Arrange exchange and complete the deal
+
+Commands (from anywhere in chat):
+• *accept OFFER-ID* to accept an offer
+• *reject OFFER-ID* to decline
+• *counter OFFER-ID price* to counter-offer
+
+1️⃣ Back to help
+
+_Reply with 1_`,
+    pid: `🛒 *How Marketplace Work*
+
+Step by step:
+1. Collect materials from pickups
+2. Sort by type (PET, Metal, etc.)
+3. Go to Marketplace → Post Listing
+4. Enter material, quantity, and price/kg
+5. Buyers go browse and send offer
+6. Accept, reject, or counter their offer
+7. Arrange exchange and complete the deal
+
+Commands (from anywhere in chat):
+• *accept OFFER-ID* to accept offer
+• *reject OFFER-ID* to decline
+• *counter OFFER-ID price* to counter
+
+1️⃣ Back to help
+
+_Reply with 1_`
+  },
+
+  contactSupport: {
+    en: `📞 *Contact Support*
+
+We're here to help!
+
+📧 Email: support@ecosort.com
+📱 WhatsApp: +2348012345678
+🕐 Hours: 8am - 6pm (Mon-Fri)
+
+Common issues:
+• Pickup dispute? Reply with details
+• Payment not received? Contact us
+• Account issue? We'll sort it out
+
+Or reply here and we'll respond within 1 hour.
+
+1️⃣ Back to help
+
+_Reply with 1_`,
+    pid: `📞 *Contact Support*
+
+We dey for you!
+
+📧 Email: support@ecosort.com
+📱 WhatsApp: +2348012345678
+🕐 Hours: 8am - 6pm (Mon-Fri)
+
+Common issues:
+• Pickup dispute? Reply with details
+• Payment no arrive? Contact us
+• Account wahala? We go sort am
+
+Or reply here and we go respond within 1 hour.
+
+1️⃣ Back to help
+
+_Reply with 1_`
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// BUYER HELP CENTER
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const buyerHelp = {
+  main: {
+    en: `🏭 *Buyer Help Center*
+
+How can we help?
+
+1️⃣ How to find materials
+2️⃣ How to make offers
+3️⃣ How transactions work
+4️⃣ How ESG certificates work
+5️⃣ Contact support
+6️⃣ Back to menu
+
+_Reply with number_`,
+    pid: `🏭 *Buyer Help Center*
+
+How I fit help you?
+
+1️⃣ How to find materials
+2️⃣ How to make offer
+3️⃣ How transactions work
+4️⃣ How ESG certificate work
+5️⃣ Contact support
+6️⃣ Back to menu
+
+_Reply with number_`
+  },
+
+  findMaterials: {
+    en: `🔍 *How to Find Materials*
+
+Two ways to find what you need:
+
+1. *Search Materials* — filter by material type or location (e.g. "PET", "Ikeja")
+2. *Browse All Listings* — see everything available on the marketplace
+
+Each listing shows:
+• Material type and quantity (kg)
+• Price per kg and total value
+• Collector name, rating, and verified status
+• Pickup location
+
+Note the Listing ID to make an offer.
+
+1️⃣ Back to help
+
+_Reply with 1_`,
+    pid: `🔍 *How to Find Materials*
+
+Two ways to find wetin you need:
+
+1. *Search Materials* — filter by material or location (e.g. "PET", "Ikeja")
+2. *Browse All Listings* — see everything available
+
+Each listing show:
+• Material type and quantity (kg)
+• Price per kg and total value
+• Collector name, rating, and verified status
+• Pickup location
+
+Note the Listing ID to make offer.
+
+1️⃣ Back to help
+
+_Reply with 1_`
+  },
+
+  makeOffers: {
+    en: `💬 *How to Make Offers*
+
+Step-by-step:
+1. Find a listing you want
+2. Select "Make an Offer" from your menu
+3. Enter the Listing ID
+4. Enter your price per KG (₦)
+5. Collector is notified immediately
+6. They can accept, reject, or counter
+
+Offer commands (from anywhere in chat):
+• *accept OFFER-ID* — accept a counter-offer
+• *reject OFFER-ID* — decline an offer
+
+Check "My Offers" to track all negotiations.
+
+1️⃣ Back to help
+
+_Reply with 1_`,
+    pid: `💬 *How to Make Offer*
+
+Step by step:
+1. Find listing wey you want
+2. Select "Make an Offer" from your menu
+3. Enter the Listing ID
+4. Enter your price per KG (₦)
+5. Collector go get notification immediately
+6. They fit accept, reject, or counter
+
+Offer commands (from anywhere):
+• *accept OFFER-ID* — accept counter-offer
+• *reject OFFER-ID* — decline offer
+
+Check "My Offers" to track all negotiations.
+
+1️⃣ Back to help
+
+_Reply with 1_`
+  },
+
+  howTransactions: {
+    en: `📊 *How Transactions Work*
+
+A transaction is created when a collector accepts your offer.
+
+1. You make an offer on a listing
+2. Collector accepts → transaction created
+3. You receive a Transaction ID
+4. Coordinate pickup/delivery directly
+5. Confirm the exchange
+6. ESG certificate is generated automatically
+
+View all transactions in "My Transactions" on your dashboard.
+
+1️⃣ Back to help
+
+_Reply with 1_`,
+    pid: `📊 *How Transactions Work*
+
+Transaction go create when collector accept your offer.
+
+1. You make offer on listing
+2. Collector accept → transaction create
+3. You go receive Transaction ID
+4. Coordinate pickup/delivery directly
+5. Confirm the exchange
+6. ESG certificate go generate automatically
+
+Check all transactions in "My Transactions" on dashboard.
+
+1️⃣ Back to help
+
+_Reply with 1_`
+  },
+
+  esgCertificates: {
+    en: `🌿 *How ESG Certificates Work*
+
+Every completed transaction generates a certificate.
+
+Your certificate includes:
+• Material type and quantity (kg)
+• Full chain of custody
+  — Collection → Platform verification → Buyer
+• Unique verification code (ECO-CERT-XXXX)
+• GPS coordinates of collection point
+• Date and transaction details
+
+Use for:
+• ESG / CSR annual reports
+• Sustainability audits
+• Compliance documentation
+• Investor reporting
+
+1️⃣ Back to help
+
+_Reply with 1_`,
+    pid: `🌿 *How ESG Certificate Work*
+
+Every completed transaction go generate certificate.
+
+Your certificate include:
+• Material type and quantity (kg)
+• Full chain of custody
+  — Collection → Platform → Buyer
+• Unique verification code (ECO-CERT-XXXX)
+• GPS coordinates of collection
+• Date and transaction details
+
+Use am for:
+• ESG / CSR reports
+• Sustainability audit
+• Compliance documentation
+• Investor reporting
+
+1️⃣ Back to help
+
+_Reply with 1_`
+  },
+
+  contactSupport: {
+    en: `📞 *Contact Support*
+
+We're here to help!
+
+📧 Email: support@ecosort.com
+📱 WhatsApp: +2348012345678
+🕐 Hours: 8am - 6pm (Mon-Fri)
+
+Common issues:
+• Collector not responding? Contact us
+• Certificate not generated? We'll fix it
+• Payment dispute? Our team will mediate
+
+Or reply here and we'll respond within 1 hour.
+
+1️⃣ Back to help
+
+_Reply with 1_`,
+    pid: `📞 *Contact Support*
+
+We dey for you!
+
+📧 Email: support@ecosort.com
+📱 WhatsApp: +2348012345678
+🕐 Hours: 8am - 6pm (Mon-Fri)
+
+Common issues:
+• Collector no dey respond? Contact us
+• Certificate no generate? We go fix am
+• Payment dispute? Our team go mediate
+
+Or reply here and we go respond within 1 hour.
+
+1️⃣ Back to help
+
+_Reply with 1_`
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // UTILITY FUNCTION TO GET LOCALIZED MESSAGE
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -1523,6 +2325,8 @@ const allScreens = {
   welcome,
   roleSelect,
   householdRegistration,
+  collectorRegistration,
+  buyerRegistration,
   householdMenu,
   mainMenu,
   requestPickup,
@@ -1531,7 +2335,10 @@ const allScreens = {
   quiz,
   pointsRewards,
   rewards,
+  leaderboard,
   helpCenter,
+  collectorHelp,
+  buyerHelp,
   collectorMenu: collectorMenuAlias,
   buyerMenu: buyerMenuAlias,
   errors,
@@ -1578,6 +2385,8 @@ function addNavigation(message, lang) {
 module.exports = {
   onboarding,
   householdRegistration,
+  collectorRegistration,
+  buyerRegistration,
   householdMenu,
   requestPickup,
   trackPickups,
@@ -1585,7 +2394,10 @@ module.exports = {
   quiz,
   pointsRewards,
   rewards,
+  leaderboard,
   helpCenter,
+  collectorHelp,
+  buyerHelp,
   collectorMenu,
   buyerMenu,
   errors,

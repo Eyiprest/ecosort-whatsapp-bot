@@ -365,7 +365,120 @@ async function handleMyPoints(client, message, phone, sess) {
   const monthly = user.monthlyPoints || 0;
   const lifetime = user.lifetimePoints || 0;
   await message.reply(msg('pointsRewards.myPoints', lang, total, monthly, lifetime));
+  session.set(phone, { step: 'points_sub' });
+}
+
+async function handlePointsSub(client, message, phone, sess) {
+  const body = message.body.trim();
+  const lang = sess.lang;
+  if (!isMenuChoice(body, 3)) {
+    await message.reply(msg('invalidChoice', lang));
+    const user = storage.findOne('users', u => u.phone === phone);
+    const total = user ? (user.points || 0) : 0;
+    const monthly = user ? (user.monthlyPoints || 0) : 0;
+    const lifetime = user ? (user.lifetimePoints || 0) : 0;
+    await message.reply(msg('pointsRewards.myPoints', lang, total, monthly, lifetime));
+    return;
+  }
+  const choice = getMenuChoice(body);
+  if (choice === 1) return handleRewardsList(client, message, phone, sess);
+  if (choice === 2) return handleLeaderboard(client, message, phone, sess);
   session.set(phone, { step: 'household_menu' });
+  await message.reply(msg('mainMenu', lang));
+}
+
+async function handleLeaderboard(client, message, phone, sess) {
+  const lang = sess.lang;
+  const allUsers = storage.readAll('users');
+  if (allUsers.length === 0) {
+    await message.reply(msg('leaderboard.empty', lang));
+    session.set(phone, { step: 'household_menu' });
+    return;
+  }
+  const sorted = [...allUsers].sort((a, b) => (b.points || 0) - (a.points || 0));
+  const medals = ['🥇', '🥈', '🥉'];
+  const entries = sorted.slice(0, 10).map((u, i) => {
+    const prefix = i < 3 ? medals[i] : `${i + 1}.`;
+    return `${prefix} ${u.name || 'Recycler'} — ${u.points || 0} pts`;
+  }).join('\n');
+  const userRank = sorted.findIndex(u => u.phone === phone) + 1;
+  await message.reply(msg('leaderboard.board', lang, entries, userRank));
+  session.set(phone, { step: 'leaderboard_sub' });
+}
+
+async function handleLeaderboardSub(client, message, phone, sess) {
+  const body = message.body.trim();
+  const lang = sess.lang;
+  if (!isMenuChoice(body, 2)) {
+    await message.reply(msg('invalidChoice', lang));
+    return handleLeaderboard(client, message, phone, sess);
+  }
+  if (getMenuChoice(body) === 1) return handleMyPoints(client, message, phone, sess);
+  session.set(phone, { step: 'household_menu' });
+  await message.reply(msg('mainMenu', lang));
+}
+
+async function handleRewardsList(client, message, phone, sess) {
+  const lang = sess.lang;
+  const user = storage.findOne('users', u => u.phone === phone);
+  if (!user) { await message.reply(msg('notRegistered', lang)); return; }
+  await message.reply(msg('pointsRewards.availableRewards', lang, user.points || 0));
+  session.set(phone, { step: 'rewards_redeem' });
+}
+
+async function handleRewardsRedeem(client, message, phone, sess) {
+  const body = message.body.trim();
+  const lang = sess.lang;
+  const user = storage.findOne('users', u => u.phone === phone);
+  if (!user) { await message.reply(msg('notRegistered', lang)); return; }
+
+  if (!isMenuChoice(body, 4)) {
+    await message.reply(msg('invalidChoice', lang));
+    await message.reply(msg('pointsRewards.availableRewards', lang, user.points || 0));
+    return;
+  }
+
+  const choice = getMenuChoice(body);
+  if (choice === 4) {
+    session.set(phone, { step: 'household_menu' });
+    await message.reply(msg('mainMenu', lang));
+    return;
+  }
+
+  const pointCosts = { 1: 500, 2: 1000, 3: 2500 };
+  const rewardNames = {
+    1: '₦500 Airtime',
+    2: '1GB Data Bundle',
+    3: '₦2,500 Shopping Voucher'
+  };
+  const requiredPoints = pointCosts[choice];
+  const currentPoints = user.points || 0;
+
+  if (currentPoints < requiredPoints) {
+    const shortfall = requiredPoints - currentPoints;
+    await message.reply(lang === 'pid'
+      ? `❌ *Not Enough Points*\n\nYou get *${currentPoints}* points but need *${requiredPoints}* points.\n\nYou need ${shortfall} more points.\n\nKeep recycling to earn more! ♻️`
+      : `❌ *Not Enough Points*\n\nYou have *${currentPoints}* points but need *${requiredPoints}* points.\n\nEarn ${shortfall} more points to unlock this reward.\n\nKeep recycling! ♻️`);
+    session.set(phone, { step: 'household_menu' });
+    await message.reply(msg('mainMenu', lang));
+    return;
+  }
+
+  storage.update('users', u => u.phone === phone, { points: currentPoints - requiredPoints });
+  try {
+    storage.insert('redemptions', {
+      userPhone: phone,
+      userName: user.name,
+      reward: rewardNames[choice],
+      pointsCost: requiredPoints,
+      status: 'pending',
+      createdAt: new Date().toISOString()
+    });
+  } catch (_) {}
+
+  await message.reply(msg('rewards.redeemed', lang));
+  session.set(phone, { step: 'household_menu' });
+  await message.reply(msg('mainMenu', lang));
 }
 
 async function handleHelp(client, message, phone, sess) {
@@ -425,8 +538,13 @@ async function handleHelp(client, message, phone, sess) {
   session.set(phone, { step: 'help_menu' });
 }
 
-// ── REWARDS ───────────────────────────────────────────────────────────────────
+// ── REWARDS (redemption list) ─────────────────────────────────────────────────
 async function handleRewards(client, message, phone, sess) {
+  return handleRewardsList(client, message, phone, sess);
+}
+
+// ── ACHIEVEMENTS (badges + leaderboard summary) ───────────────────────────────
+async function handleAchievements(client, message, phone, sess) {
   const lang = sess.lang;
   const user = storage.findOne('users', u => u.phone === phone);
   if (!user) { await message.reply(msg('notRegistered', lang)); return; }
@@ -435,19 +553,18 @@ async function handleRewards(client, message, phone, sess) {
   const sorted = [...allUsers].sort((a, b) => (b.points || 0) - (a.points || 0));
   const rank = sorted.findIndex(u => u.phone === phone) + 1;
   const topThree = sorted.slice(0, 3).map((u, i) =>
-    `${['🥇','🥈','🥉'][i]} ${u.name} — ${u.points || 0} pts`).join('\n');
+    `${['🥇', '🥈', '🥉'][i]} ${u.name} — ${u.points || 0} pts`).join('\n');
   const badges = (user.badges || []).length > 0 ? user.badges.join(' ') : (lang === 'pid' ? 'None yet' : 'None yet');
   const streak = user.streak || 0;
   const streakLine = streak > 0
-    ? (lang === 'pid' ? `🔥 Streak: *${streak} day${streak === 1 ? '' : 's'}* in a row!` : `🔥 Streak: *${streak} day${streak === 1 ? '' : 's'}* in a row!`)
+    ? `🔥 Streak: *${streak} day${streak === 1 ? '' : 's'}* in a row!`
     : '';
 
   await message.reply(lang === 'pid'
-    ? `🏆 *Your EcoSort Rewards*\n\n⭐ Points: *${user.points || 0}*\n🏅 Rank: *#${rank}*\n${streakLine}\n🎖️ Badges: ${badges}\n\n📊 *Top Recyclers:*\n${topThree}\n\n♻️ Keep recycling to earn more!`
-    : `🏆 *Your EcoSort Rewards*\n\n⭐ Points: *${user.points || 0}*\n🏅 Rank: *#${rank}*\n${streakLine}\n🎖️ Badges: ${badges}\n\n📊 *Top Recyclers:*\n${topThree}\n\n♻️ Keep recycling to climb the leaderboard!`);
+    ? `🏆 *Your Achievements*\n\n⭐ Points: *${user.points || 0}*\n🏅 Rank: *#${rank}*\n${streakLine}\n🎖️ Badges: ${badges}\n\n📊 *Top Recyclers:*\n${topThree}\n\n♻️ Keep recycling to earn more!\n\n1️⃣ Redeem Rewards\n2️⃣ Back to Menu\n\nReply with number.`
+    : `🏆 *Your Achievements*\n\n⭐ Points: *${user.points || 0}*\n🏅 Rank: *#${rank}*\n${streakLine}\n🎖️ Badges: ${badges}\n\n📊 *Top Recyclers:*\n${topThree}\n\n♻️ Keep recycling to climb the leaderboard!\n\n1️⃣ Redeem Rewards\n2️⃣ Back to Menu\n\nReply with number.`);
 
-  session.set(phone, { step: 'household_menu' });
-  await message.reply(msg('mainMenu', lang));
+  session.set(phone, { step: 'achievements_sub' });
 }
 
 // ── HISTORY ───────────────────────────────────────────────────────────────────
@@ -520,6 +637,25 @@ async function handle(client, message, phone, sess) {
   if (['track_select','track_detail_choice','track_cancel_confirm'].includes(sess.step)) {
     if (sess.step === 'track_select') return handleTrackSelection(client, message, phone, sess);
     return handleTrackDetail(client, message, phone, sess);
+  }
+
+  // Points sub-flow
+  if (sess.step === 'points_sub') return handlePointsSub(client, message, phone, sess);
+  if (sess.step === 'leaderboard_sub') return handleLeaderboardSub(client, message, phone, sess);
+
+  // Rewards sub-flow
+  if (sess.step === 'rewards_redeem') return handleRewardsRedeem(client, message, phone, sess);
+  if (sess.step === 'achievements_sub') {
+    const body = message.body.trim();
+    const lang = sess.lang;
+    if (!isMenuChoice(body, 2)) {
+      await message.reply(msg('invalidChoice', lang));
+      return handleAchievements(client, message, phone, sess);
+    }
+    if (getMenuChoice(body) === 1) return handleRewardsList(client, message, phone, sess);
+    session.set(phone, { step: 'household_menu' });
+    await message.reply(msg('mainMenu', lang));
+    return;
   }
 
   // Help center flow
