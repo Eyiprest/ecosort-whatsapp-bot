@@ -229,28 +229,28 @@ const householdMenu = {
 
 What would you like to do?
 
-1️⃣ 🗑️ Request Pickup
-2️⃣ 📍 Track Pickups
-3️⃣ 📚 Learn Recycling
-4️⃣ 🎯 Quiz Challenge
-5️⃣ ⭐ My Points
-6️⃣ 🎁 Rewards
-7️⃣ 👤 My Profile
-8️⃣ ❓ Help
+1️⃣ Request Pickup
+2️⃣ Track Pickups
+3️⃣ Learn Recycling
+4️⃣ Quiz Challenge
+5️⃣ My Points
+6️⃣ Rewards
+7️⃣ My Profile
+8️⃣ Help
 
 _Reply with number (1-8)_`,
     pid: `🏠 *Household Dashboard*
 
 Wetin you wan do?
 
-1️⃣ 🗑️ Request Pickup
-2️⃣ 📍 Track Pickups
-3️⃣ 📚 Learn Recycling
-4️⃣ 🎯 Quiz Challenge
-5️⃣ ⭐ My Points
-6️⃣ 🎁 Rewards
-7️⃣ 👤 My Profile
-8️⃣ ❓ Help
+1️⃣ Request Pickup
+2️⃣ Track Pickups
+3️⃣ Learn Recycling
+4️⃣ Quiz Challenge
+5️⃣ My Points
+6️⃣ Rewards
+7️⃣ My Profile
+8️⃣ Help
 
 _Reply with number (1-8)_`
   }
@@ -291,14 +291,14 @@ _Reply with number_`
   },
 
   quantityPrompt: {
-    en: `⚖️ *Step 2 of 5: Enter Quantity*
+    en: `*Step 2 of 5: Enter Quantity*
 
 How much waste do you have? (in KG only)
 
 Examples: 5kg, 10kg, 25kg
 
 _Type the quantity (e.g. 10)_`,
-    pid: `⚖️ *Step 2 of 5: Enter Quantity*
+    pid: `*Step 2 of 5: Enter Quantity*
 
 How much waste you get? (in KG only)
 
@@ -308,13 +308,13 @@ _Type the quantity (e.g. 10)_`
   },
 
   addressConfirm: {
-    en: `📍 *Step 3 of 5: Pickup Address*
+    en: `*Step 3 of 5: Pickup Address*
 
 1️⃣ Use Saved Address
 2️⃣ Enter New Address
 
 _Reply with 1 or 2_`,
-    pid: `📍 *Step 3 of 5: Pickup Address*
+    pid: `*Step 3 of 5: Pickup Address*
 
 1️⃣ Use Saved Address
 2️⃣ Enter New Address
@@ -323,7 +323,7 @@ _Reply with 1 or 2_`
   },
 
   daySelect: {
-    en: `📅 *Step 4 of 5: Preferred Collection Day*
+    en: `*Step 4 of 5: Preferred Collection Day*
 
 When should we pick up your waste?
 
@@ -335,7 +335,7 @@ When should we pick up your waste?
 6️⃣ Saturday
 
 _Reply with number_`,
-    pid: `📅 *Step 4 of 5: Preferred Collection Day*
+    pid: `*Step 4 of 5: Preferred Collection Day*
 
 When we should come pick am?
 
@@ -350,7 +350,7 @@ _Reply with number_`
   },
 
   timeSelect: {
-    en: `🕐 *Step 5 of 5: Preferred Collection Time*
+    en: `*Step 5 of 5: Preferred Collection Time*
 
 What time works best for you?
 
@@ -360,7 +360,7 @@ What time works best for you?
 4️⃣ 2pm - 4pm
 
 _Reply with number_`,
-    pid: `🕐 *Step 5 of 5: Preferred Collection Time*
+    pid: `*Step 5 of 5: Preferred Collection Time*
 
 Wetin time good for you?
 
@@ -373,25 +373,25 @@ _Reply with number_`
   },
 
   reviewRequest: (details) => ({
-    en: `📋 *Review Your Pickup Request*
+    en: `*Review Your Pickup Request*
 
 ${details}
 
 Does everything look correct?
 
 1️⃣ ✅ Confirm & Submit
-2️⃣ ✏️ Edit Request
+2️⃣ Edit Request
 3️⃣ ❌ Cancel
 
 _Reply with number_`,
-    pid: `📋 *Review Your Pickup Request*
+    pid: `*Review Your Pickup Request*
 
 ${details}
 
 Everything correct?
 
 1️⃣ ✅ Confirm & Submit
-2️⃣ ✏️ Edit Request
+2️⃣ Edit Request
 3️⃣ ❌ Cancel
 
 _Reply with number_`
@@ -413,7 +413,7 @@ Next Step: Wait for updates here or type *menu* to return to your dashboard.
 
 const trackPickups = {
   noPickups: {
-    en: `📭 *No Active Pickups*
+    en: `*No Active Pickups*
 
 You don't have any pending pickups right now.
 
@@ -422,7 +422,7 @@ What would you like to do?
 2️⃣ Return to menu
 
 _Reply with 1 or 2_`,
-    pid: `📭 *No Active Pickups*
+    pid: `*No Active Pickups*
 
 You no get pending pickup now.
 
@@ -434,12 +434,12 @@ _Reply with 1 or 2_`
   },
 
   pickupList: (pickups) => ({
-    en: `📍 *Your Active Pickups*
+    en: `*Your Active Pickups*
 
 ${pickups}
 
 Reply with a pickup ID to see details or type *menu* to return.`,
-    pid: `📍 *Your Active Pickups*
+    pid: `*Your Active Pickups*
 
 ${pickups}
 
@@ -447,28 +447,28 @@ Reply with a pickup ID to see details or type *menu* to return.`
   }),
 
   pickupDetails: (details) => ({
-    en: `📍 *Pickup Details*
+    en: `*Pickup Details*
 
 ${details}
 
-1️⃣ 🔎 View Status
+1️⃣ View Status
 2️⃣ ❌ Cancel Pickup
-3️⃣ ⬅️ Back
+3️⃣ Back
 
 _Reply with number_`,
-    pid: `📍 *Pickup Details*
+    pid: `*Pickup Details*
 
 ${details}
 
-1️⃣ 🔎 View Status
+1️⃣ View Status
 2️⃣ ❌ Cancel Pickup
-3️⃣ ⬅️ Back
+3️⃣ Back
 
 _Reply with number_`
   }),
 
   cancelConfirm: {
-    en: `⚠️ *Cancel Pickup*
+    en: `*Cancel Pickup*
 
 Are you sure you want to cancel this pickup?
 
@@ -476,7 +476,7 @@ Are you sure you want to cancel this pickup?
 2️⃣ No, keep it
 
 _Reply with number_`,
-    pid: `⚠️ *Cancel Pickup*
+    pid: `*Cancel Pickup*
 
 You sure say you wan cancel this pickup?
 
@@ -506,7 +506,7 @@ Type *menu* to return to your dashboard.`
 
 const learnRecycling = {
   categorySelect: {
-    en: `📚 *Learn Recycling - Pick a Category*
+    en: `*Learn Recycling - Pick a Category*
 
 Choose a waste category to learn about:
 
@@ -518,7 +518,7 @@ Choose a waste category to learn about:
 6️⃣ ⚡ E-Waste
 
 _Reply with number_`,
-    pid: `📚 *Learn Recycling - Pick a Category*
+    pid: `*Learn Recycling - Pick a Category*
 
 Choose waste category to learn about:
 
@@ -831,7 +831,7 @@ _Reply with 1 to return to categories_`
 
 const quiz = {
   start: {
-    en: `🎯 *Recycling Quiz Challenge*
+    en: `*Recycling Quiz Challenge*
 
 Test your recycling knowledge and earn points!
 
@@ -843,10 +843,10 @@ Test your recycling knowledge and earn points!
 Ready to start?
 
 1️⃣ ✅ Start Quiz
-2️⃣ ⬅️ Back to Menu
+2️⃣ Back to Menu
 
 _Reply with 1 or 2_`,
-    pid: `🎯 *Recycling Quiz Challenge*
+    pid: `*Recycling Quiz Challenge*
 
 Test your recycling knowledge and earn points!
 
@@ -858,18 +858,18 @@ Test your recycling knowledge and earn points!
 You ready?
 
 1️⃣ ✅ Start Quiz
-2️⃣ ⬅️ Back to Menu
+2️⃣ Back to Menu
 
 _Reply with 1 or 2_`
   },
 
   quizQuestion: (qNum, total, question) => ({
-    en: `🎯 *Question ${qNum} of ${total}*
+    en: `*Question ${qNum} of ${total}*
 
 ${question}
 
 _Reply with your answer number_`,
-    pid: `🎯 *Question ${qNum} of ${total}*
+    pid: `*Question ${qNum} of ${total}*
 
 ${question}
 
@@ -884,8 +884,8 @@ Points Earned: *${score * 10}* 🏆
 
 Great job! Check your points in the menu.
 
-1️⃣ 🔄 Retake Quiz
-2️⃣ ⬅️ Back to Menu
+1️⃣ Retake Quiz
+2️⃣ Back to Menu
 
 _Reply with 1 or 2_`,
     pid: `🎉 *Quiz Complete!*
@@ -895,8 +895,8 @@ Points Earned: *${score * 10}* 🏆
 
 Excellent! Check your points in the menu.
 
-1️⃣ 🔄 Retake Quiz
-2️⃣ ⬅️ Back to Menu
+1️⃣ Retake Quiz
+2️⃣ Back to Menu
 
 _Reply with 1 or 2_`
   })
@@ -908,49 +908,49 @@ _Reply with 1 or 2_`
 
 const pointsRewards = {
   myPoints: (totalPoints, monthlyPoints, lifetime) => ({
-    en: `⭐ *Your Points*
+    en: `*Your Points*
 
 Total Points: *${totalPoints}*
 Monthly Points: *${monthlyPoints}*
 Lifetime Points: *${lifetime}*
 
-📈 Ways to Earn:
+Ways to Earn:
 • Request pickups: 10 points
 • Complete pickups: 20 points
 • Quiz completion: 50 points
 • Community actions: 20 points
 
-1️⃣ 🎁 View Rewards
-2️⃣ 📊 Leaderboard
-3️⃣ ⬅️ Back
+1️⃣ View Rewards
+2️⃣ Leaderboard
+3️⃣ Back
 
 _Reply with number_`,
-    pid: `⭐ *Your Points*
+    pid: `*Your Points*
 
 Total Points: *${totalPoints}*
 Monthly Points: *${monthlyPoints}*
 Lifetime Points: *${lifetime}*
 
-📈 Ways to Earn:
+Ways to Earn:
 • Request pickup: 10 points
 • Complete pickup: 20 points
 • Quiz completion: 50 points
 • Community actions: 20 points
 
-1️⃣ 🎁 View Rewards
-2️⃣ 📊 Leaderboard
-3️⃣ ⬅️ Back
+1️⃣ View Rewards
+2️⃣ Leaderboard
+3️⃣ Back
 
 _Reply with number_`
   }),
 
   availableRewards: (currentPoints) => ({
-    en: `🎁 *Available Rewards*
+    en: `*Available Rewards*
 
-500 points = 📱 ₦500 Airtime
-1000 points = 📶 Data Bundle (1GB)
-2500 points = 🛍️ Shopping Voucher
-5000 points = 💳 Premium Membership
+500 points = ₦500 Airtime
+1000 points = Data Bundle (1GB)
+2500 points = Shopping Voucher
+5000 points = Premium Membership
 
 You have: *${currentPoints}* points
 
@@ -958,15 +958,15 @@ Which reward would you like to redeem?
 1️⃣ 500pt Airtime
 2️⃣ 1000pt Data
 3️⃣ 2500pt Voucher
-4️⃣ ⬅️ Back
+4️⃣ Back
 
 _Reply with number_`,
-    pid: `🎁 *Available Rewards*
+    pid: `*Available Rewards*
 
-500 points = 📱 ₦500 Airtime
-1000 points = 📶 Data Bundle (1GB)
-2500 points = 🛍️ Shopping Voucher
-5000 points = 💳 Premium Membership
+500 points = ₦500 Airtime
+1000 points = Data Bundle (1GB)
+2500 points = Shopping Voucher
+5000 points = Premium Membership
 
 You get: *${currentPoints}* points
 
@@ -974,7 +974,7 @@ Wetin reward you want?
 1️⃣ 500pt Airtime
 2️⃣ 1000pt Data
 3️⃣ 2500pt Voucher
-4️⃣ ⬅️ Back
+4️⃣ Back
 
 _Reply with number_`
   })
@@ -982,7 +982,7 @@ _Reply with number_`
 
 const helpCenter = {
   main: {
-    en: `❓ *EcoSort Help Center*
+    en: `*EcoSort Help Center*
 
 How can we help?
 
@@ -991,10 +991,10 @@ How can we help?
 3️⃣ How rewards work
 4️⃣ How selling works
 5️⃣ Contact support
-6️⃣ ⬅️ Back to menu
+6️⃣ Back to menu
 
 _Reply with number_`,
-    pid: `❓ *EcoSort Help Center*
+    pid: `*EcoSort Help Center*
 
 How I fit help you?
 
