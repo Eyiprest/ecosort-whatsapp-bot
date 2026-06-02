@@ -4,6 +4,8 @@ const { msg } = require('../utils/messages');
 const { generateEcoId, generateId, timestamp, formatDate, materialEmoji } = require('../utils/helpers');
 const { isValidPhone, isValidName, isMenuChoice, getMenuChoice, isPositiveNumber } = require('../utils/validators');
 const { viewListings, handleOffer } = require('./marketplace');
+const { generateCertificate, formatCertificateText } = require('./certificates');
+const { generateCertificatePDF } = require('../utils/pdfGenerator');
 
 const MATERIAL_INTERESTS = ['PET Bottles', 'Aluminum & Metals', 'Nylon & Plastics', 'Paper & Cartons', 'Mixed Recyclables', 'All Materials'];
 const VOLUMES = ['0–1 tonne/month', '1–5 tonnes/month', '5–20 tonnes/month', '20+ tonnes/month'];
@@ -76,16 +78,36 @@ async function viewMyOffers(client, message, phone, sess) {
   const lang = sess.lang;
   const offers = storage.findAll('offers', o => o.buyerPhone === phone);
   if (offers.length === 0) {
-    await message.reply(lang === 'pid' ? '📭 You never send any offer yet.' : '📭 No offers yet. Browse listings and make an offer!');
+    await message.reply(lang === 'pid'
+      ? `📭 *No Offers Yet*\n\nYou never send any offer.\n\nBrowse listings and make an offer to get started!`
+      : `📭 *No Offers Yet*\n\nYou haven't made any offers yet.\n\nBrowse listings and make an offer to get started!`);
     session.set(phone, { step: 'buyer_menu' });
     await message.reply(msg('buyerMenu', lang));
     return;
   }
+
   const statusEmoji = { pending: '⏳', accepted: '✅', rejected: '❌', countered: '🔄' };
-  const lines = offers.reverse().slice(0, 6).map(o =>
-    `• *${o.id}*\n  Listing: ${o.listingId} | ₦${o.offerPrice}/kg\n  ${statusEmoji[o.status] || '⏳'} ${o.status.toUpperCase()} | ${formatDate(o.createdAt)}`
-  ).join('\n\n');
-  await message.reply(lang === 'pid' ? `📋 *Your Offers:*\n\n${lines}` : `📋 *Your Offers:*\n\n${lines}`);
+  const sorted = [...offers].reverse().slice(0, 8);
+
+  const lines = sorted.map(o => {
+    let line = `${statusEmoji[o.status] || '⏳'} *${o.id}*\n`;
+    line += `   Listing: ${o.listingId}  |  Your Offer: ₦${o.offerPrice}/kg`;
+    if (o.counterPrice) line += `\n   🔄 Counter from collector: *₦${o.counterPrice}/kg*`;
+    line += `\n   Status: *${o.status.toUpperCase()}*  |  ${formatDate(o.createdAt)}`;
+    return line;
+  }).join('\n\n');
+
+  // Highlight any countered offers that need a response
+  const countered = offers.filter(o => o.status === 'countered');
+  const actionNote = countered.length > 0
+    ? (lang === 'pid'
+      ? `\n\n⚠️ *${countered.length} counter-offer(s) waiting for your response!*\n\nTo respond, type:\n✅  accept [OFFER-ID]  (accept their counter price)\n❌  reject [OFFER-ID]  (decline the deal)`
+      : `\n\n⚠️ *${countered.length} counter-offer(s) awaiting your response!*\n\nTo respond, type:\n✅  accept [OFFER-ID]  (accept counter price)\n❌  reject [OFFER-ID]  (decline the deal)`)
+    : '';
+
+  await message.reply(lang === 'pid'
+    ? `📋 *Your Offers:*\n\n${lines}${actionNote}`
+    : `📋 *Your Offers:*\n\n${lines}${actionNote}`);
   session.set(phone, { step: 'buyer_menu' });
   await message.reply(msg('buyerMenu', lang));
 }
@@ -123,32 +145,82 @@ async function viewCertificates(client, message, phone, sess) {
     return;
   }
 
+  // Ensure all certs are created in storage
+  const certs = txns.slice(0, 5).map(t => generateCertificate(t, buyer ? buyer.companyName : 'Buyer'));
   const total = txns.reduce((acc, t) => acc + (t.quantity || 0), 0);
-  const certLines = txns.slice(0, 3).map(t => {
-    const certId = `CERT-${t.id}`;
-    const cert = {
-      id: certId,
-      transactionId: t.id,
-      buyerName: buyer ? buyer.companyName : 'Buyer',
-      material: t.material,
-      quantity: t.quantity,
-      agreedPrice: t.agreedPrice,
-      gps: t.gps,
-      chainOfCustody: [
-        { step: 'Collection', actor: 'EcoSort Collector', date: t.createdAt },
-        { step: 'Verification', actor: 'EcoSort Platform', date: timestamp() },
-        { step: 'Transfer', actor: buyer ? buyer.companyName : 'Buyer', date: timestamp() }
-      ],
-      verificationCode: `ECO-${certId}`,
-      issuedAt: timestamp()
-    };
-    if (!storage.findOne('certificates', c => c.id === certId)) storage.insert('certificates', cert);
-    return `🏅 *${certId}*\n   ${materialEmoji(t.material)} | ${t.quantity}kg | ${formatDate(t.createdAt)}\n   Verify: ECO-${certId}`;
-  }).join('\n\n');
+
+  const lines = certs.map((c, i) =>
+    `${i + 1}️⃣ *${c.id}*\n   ${materialEmoji(c.material)} ${c.material}  |  ${c.quantity}kg  |  ${formatDate(c.issuedAt)}\n   Verify: ${c.verificationCode}`
+  ).join('\n\n');
+
+  const downloadHint = lang === 'pid'
+    ? `\n\n📥 *To download as PDF, reply with the number (e.g. 1, 2, 3)*\n_Or type *menu* to go back_`
+    : `\n\n📥 *Reply with a number to download that certificate as PDF (e.g. 1, 2, 3)*\n_Or type *menu* to go back_`;
+
+  await message.reply(
+    `🌿 *Your ESG Certificates*\n\n${lines}\n\n📊 Total Sourced: *${total}kg*\n\n` +
+    `✅ Valid for ESG/CSR reporting, sustainability audits, and compliance documentation.` +
+    downloadHint
+  );
+
+  // Save cert IDs in session so the next reply knows which to download
+  session.setData(phone, 'certIds', certs.map(c => c.id));
+  session.set(phone, { step: 'cert_download' });
+}
+
+async function handleCertDownload(client, message, phone, sess) {
+  const lang = sess.lang;
+  const body = message.body.trim();
+  const certIds = (sess.data && sess.data.certIds) || [];
+
+  if (!certIds.length) {
+    session.set(phone, { step: 'buyer_menu' });
+    await message.reply(msg('buyerMenu', lang));
+    return;
+  }
+
+  const idx = parseInt(body, 10);
+  if (isNaN(idx) || idx < 1 || idx > certIds.length) {
+    await message.reply(lang === 'pid'
+      ? `❌ Reply with a number between 1 and ${certIds.length}.`
+      : `❌ Please reply with a number between 1 and ${certIds.length}.`);
+    return;
+  }
+
+  const certId = certIds[idx - 1];
+  const cert = storage.findOne('certificates', c => c.id === certId);
+  if (!cert) {
+    await message.reply(lang === 'pid'
+      ? '❌ Certificate no dey. Try again.'
+      : '❌ Certificate not found. Please try again.');
+    session.set(phone, { step: 'buyer_menu' });
+    await message.reply(msg('buyerMenu', lang));
+    return;
+  }
 
   await message.reply(lang === 'pid'
-    ? `🌿 *Your ESG Certificates*\n\n${certLines}\n\n📊 Total Material: *${total}kg*\n\n✅ These certificates verify your recycling chain-of-custody for ESG/CSR reporting.`
-    : `🌿 *Your ESG Certificates*\n\n${certLines}\n\n📊 Total Sourced: *${total}kg*\n\n✅ Submit these for ESG/CSR reporting.`);
+    ? `⏳ Generating your certificate PDF... hold on.`
+    : `⏳ Generating your certificate PDF, please wait...`);
+
+  try {
+    const pdfBuffer = await generateCertificatePDF(cert);
+    const fileName = `EcoSort-ESG-Certificate-${cert.id}.pdf`;
+
+    await client.sendMessage(`${phone}@c.us`, {
+      document: pdfBuffer,
+      mimetype: 'application/pdf',
+      fileName,
+      caption: lang === 'pid'
+        ? `🌿 *ESG Certificate — ${cert.id}*\n\nYou fit download am, save am, or share am directly from WhatsApp.\n\nVerification code: *${cert.verificationCode}*`
+        : `🌿 *ESG Certificate — ${cert.id}*\n\nDownload, save, or forward directly from WhatsApp.\n\nVerification code: *${cert.verificationCode}*`
+    });
+  } catch (err) {
+    // Fallback: send the text version if PDF fails
+    await message.reply(formatCertificateText(cert));
+    await message.reply(lang === 'pid'
+      ? `⚠️ PDF no generate. We don send text version instead. Contact support@ecosort.com to get proper PDF.`
+      : `⚠️ PDF could not be generated. Text version sent above. Contact support@ecosort.com for the full PDF.`);
+  }
 
   session.set(phone, { step: 'buyer_menu' });
   await message.reply(msg('buyerMenu', lang));
@@ -274,6 +346,7 @@ async function handle(client, message, phone, sess) {
   }
   if (['offer_listing_id','offer_price','offer_counter'].includes(sess.step)) return handleOffer(client, message, phone, sess);
   if (['buyer_help_menu','buyer_help_topic'].includes(sess.step)) return handleHelp(client, message, phone, sess);
+  if (sess.step === 'cert_download') return handleCertDownload(client, message, phone, sess);
   if (sess.step === 'save_collector_id') {
     if (body === 'skip') {
       session.set(phone, { step: 'buyer_menu' });

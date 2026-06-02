@@ -243,18 +243,36 @@ async function handleOffer(client, message, phone, sess) {
     };
     storage.insert('offers', offer);
 
+    const offerPrice = parseFloat(body);
+    const mat = listing ? materialEmoji(listing.material) : '';
+    const qty = listing ? `${listing.quantity}kg` : '';
+
     try {
       await client.sendMessage(`${collectorPhone}@c.us`,
-        lang === 'pid'
-          ? `💰 *New Offer!*\n\nOffer ID: ${offerId}\nListing: ${listingId}\nFrom: ${buyer ? buyer.companyName : 'Buyer'}\nOffer: ₦${parseFloat(body)}/kg\n\nReply:\n✅ *accept ${offerId}*\n❌ *reject ${offerId}*\n🔄 *counter ${offerId} [price]*`
-          : `💰 *New Offer Received!*\n\nOffer ID: ${offerId}\nListing: ${listingId}\nFrom: ${buyer ? buyer.companyName : 'Buyer'}\nOffer: ₦${parseFloat(body)}/kg\n\nReply:\n✅ *accept ${offerId}*\n❌ *reject ${offerId}*\n🔄 *counter ${offerId} [price]* to counter-offer`
+        `💰 *New Offer Received!*\n\n` +
+        `Offer ID: *${offerId}*\n` +
+        `Listing: ${listingId}  ${mat} ${qty}\n` +
+        `From: *${buyer ? buyer.companyName : 'Buyer'}*\n` +
+        `Their Offer: *₦${offerPrice}/kg*\n` +
+        `Your Asking Price: ₦${sess.data.offerOriginalPrice || '?'}/kg\n\n` +
+        `To respond, type ONE of these:\n` +
+        `✅  accept ${offerId}\n` +
+        `❌  reject ${offerId}\n` +
+        `🔄  counter ${offerId} [your price]  (e.g. counter ${offerId} 180)\n\n` +
+        `Or go to Marketplace → My Offers to see all pending offers.`
       );
     } catch (_) {}
 
     session.set(phone, { step: 'buyer_menu' });
-    await message.reply(lang === 'pid'
-      ? `✅ *Offer Sent!*\n\nOffer ID: *${offerId}*\nPrice: ₦${parseFloat(body)}/kg\n\nCollector don receive your offer. You go hear back soon. 🤝`
-      : `✅ *Offer Sent!*\n\nOffer ID: *${offerId}*\nPrice: ₦${parseFloat(body)}/kg\n\nCollector has been notified. You'll hear back shortly. 🤝`);
+    await message.reply(
+      `✅ *Offer Sent!*\n\n` +
+      `Offer ID: *${offerId}*\n` +
+      `Listing: ${listingId}  ${mat} ${qty}\n` +
+      `Your Offer: *₦${offerPrice}/kg*\n\n` +
+      (lang === 'pid'
+        ? `Collector don receive your offer. You go hear back soon.\n\nCheck your offer status anytime from *My Offers* in your dashboard. 🤝`
+        : `The collector has been notified and will respond shortly.\n\nTrack this offer anytime via *My Offers* in your dashboard. 🤝`)
+    );
     await message.reply(msg('buyerMenu', lang));
   }
 }
@@ -275,6 +293,11 @@ async function handleOfferResponse(client, message, phone, sess) {
     storage.update('offers', o => o.id === offer.id, { status: 'accepted', updatedAt: timestamp() });
     const txnId = generateId('TXN');
     const listing = storage.findOne('listings', l => l.id === offer.listingId);
+    const mat = listing ? materialEmoji(listing.material) : '';
+    const qty = listing ? listing.quantity : 0;
+    const agreedPrice = offer.counterPrice || offer.offerPrice;
+    const totalValue = qty * agreedPrice;
+
     storage.insert('transactions', {
       id: txnId,
       offerId: offer.id,
@@ -282,48 +305,68 @@ async function handleOfferResponse(client, message, phone, sess) {
       buyerPhone: offer.buyerPhone,
       collectorPhone: phone,
       material: listing ? listing.material : 'Unknown',
-      quantity: listing ? listing.quantity : 0,
-      agreedPrice: offer.offerPrice,
-      totalValue: listing ? listing.quantity * offer.offerPrice : 0,
+      quantity: qty,
+      agreedPrice,
+      totalValue,
       status: 'confirmed',
       gps: `6.${Math.floor(Math.random() * 9999)}, 3.${Math.floor(Math.random() * 9999)}`,
       createdAt: timestamp()
     });
     storage.update('listings', l => l.id === offer.listingId, { status: 'sold', updatedAt: timestamp() });
 
+    // Notify buyer
     try {
       await client.sendMessage(`${offer.buyerPhone}@c.us`,
-        lang === 'pid'
-          ? `✅ *Offer Accepted!*\n\nOffer ID: ${offerId}\nTransaction ID: ${txnId}\nAgreed Price: ₦${offer.offerPrice}/kg\n\nContact the collector to arrange the exchange. 🎉`
-          : `✅ *Offer Accepted!*\n\nOffer ID: ${offerId}\nTransaction ID: ${txnId}\nAgreed Price: ₦${offer.offerPrice}/kg\n\nCoordinate with the collector to complete the exchange. 🎉`
+        `✅ *Offer Accepted — Deal Done!*\n\n` +
+        `Transaction ID: *${txnId}*\n` +
+        `Offer: ${offerId}\n` +
+        `Material: ${mat} ${listing ? listing.material : ''}\n` +
+        `Quantity: *${qty}kg*\n` +
+        `Agreed Price: *₦${agreedPrice}/kg*\n` +
+        `Total Value: *₦${totalValue.toLocaleString()}*\n\n` +
+        `Next step: Coordinate pickup/delivery directly with the collector.\n` +
+        `Your ESG certificate will be available in your dashboard once complete. 🎉`
       );
     } catch (_) {}
 
-    await message.reply(lang === 'pid'
-      ? `✅ Offer accepted! Transaction ID: *${txnId}*\n\nContact the buyer to arrange everything.`
-      : `✅ Offer accepted! Transaction ID: *${txnId}*\n\nReach out to the buyer to coordinate.`);
+    // Confirm to collector
+    await message.reply(
+      `✅ *Offer ${offerId} Accepted!*\n\n` +
+      `Transaction ID: *${txnId}*\n` +
+      `Buyer: ${offer.buyerName}\n` +
+      `Agreed Price: *₦${agreedPrice}/kg*\n` +
+      `Total Value: *₦${totalValue.toLocaleString()}*\n\n` +
+      `Contact the buyer to arrange pickup/delivery. 🤝`
+    );
     return true;
   }
 
   if (action === 'reject') {
     storage.update('offers', o => o.id === offer.id, { status: 'rejected', updatedAt: timestamp() });
+
+    // Notify buyer
     try {
       await client.sendMessage(`${offer.buyerPhone}@c.us`,
-        lang === 'pid'
-          ? `❌ Your offer *${offerId}* don rejected.\n\nTry make another offer or find another listing.`
-          : `❌ Your offer *${offerId}* was declined.\n\nTry another offer or browse other listings.`
+        `❌ *Offer Declined*\n\n` +
+        `Offer ID: ${offerId} was declined by the collector.\n\n` +
+        `You can:\n` +
+        `• Make a new offer on this or another listing\n` +
+        `• Browse other materials from your Buyer Dashboard`
       );
     } catch (_) {}
-    await message.reply(lang === 'pid' ? '✅ Offer rejected.' : '✅ Offer declined.');
+
+    await message.reply(`❌ Offer *${offerId}* declined. The buyer has been notified.`);
     return true;
   }
 
   // ── COUNTER OFFER ────────────────────────────────────────────────────────────
   if (action === 'counter') {
     if (!counterPrice || isNaN(counterPrice) || counterPrice <= 0) {
-      await message.reply(lang === 'pid'
-        ? '❌ Format: *counter OFFER-ID price*\n\nExample: counter OFR-ABC123 180'
-        : '❌ Format: *counter OFFER-ID price*\n\nExample: counter OFR-ABC123 180');
+      await message.reply(
+        `❌ Wrong format. Use:\n\n` +
+        `*counter ${offerId} [your price]*\n\n` +
+        `Example: counter ${offerId} 180`
+      );
       return true;
     }
     storage.update('offers', o => o.id === offer.id, {
@@ -331,16 +374,27 @@ async function handleOfferResponse(client, message, phone, sess) {
       counterPrice,
       updatedAt: timestamp()
     });
+
+    // Notify buyer with clear action prompts
     try {
       await client.sendMessage(`${offer.buyerPhone}@c.us`,
-        lang === 'pid'
-          ? `🔄 *Counter Offer!*\n\nOffer ID: ${offerId}\nYour Offer: ₦${offer.offerPrice}/kg\nCounter Offer: ₦${counterPrice}/kg\n\nReply:\n✅ *accept ${offerId}* to accept the counter\n❌ *reject ${offerId}* to decline`
-          : `🔄 *Counter Offer!*\n\nOffer ID: ${offerId}\nYour Offer: ₦${offer.offerPrice}/kg\nCounter Offer: ₦${counterPrice}/kg\n\nReply:\n✅ *accept ${offerId}* to accept the counter\n❌ *reject ${offerId}* to decline`
+        `🔄 *Counter Offer Received!*\n\n` +
+        `Offer ID: *${offerId}*\n` +
+        `Your Offer: ₦${offer.offerPrice}/kg\n` +
+        `Collector's Counter: *₦${counterPrice}/kg*\n\n` +
+        `To respond, type ONE of these:\n` +
+        `✅  accept ${offerId}    (agree to ₦${counterPrice}/kg)\n` +
+        `❌  reject ${offerId}    (decline and walk away)\n\n` +
+        `Check all your offers via *My Offers* in your dashboard.`
       );
     } catch (_) {}
-    await message.reply(lang === 'pid'
-      ? `🔄 Counter offer sent! ₦${counterPrice}/kg\n\nWaiting for buyer response.`
-      : `🔄 Counter offer sent! ₦${counterPrice}/kg\n\nWaiting for buyer's response.`);
+
+    await message.reply(
+      `🔄 Counter offer sent!\n\n` +
+      `Offer: ${offerId}\n` +
+      `Counter Price: *₦${counterPrice}/kg*\n\n` +
+      `Waiting for the buyer's response. You'll be notified when they decide.`
+    );
     return true;
   }
 
@@ -355,6 +409,39 @@ async function startListing(client, message, phone, sess) {
   await message.reply(lang === 'pid'
     ? `♻️ *Post Listing*\n\nWetin material you wan sell?\n\n${matList}\n\nReply with number.`
     : `♻️ *Post Listing*\n\nWhat material are you listing?\n\n${matList}\n\nReply with number.`);
+}
+
+// ── COLLECTOR: VIEW INCOMING OFFERS ──────────────────────────────────────────
+async function viewCollectorOffers(client, message, phone, sess) {
+  const lang = sess.lang;
+  const offers = storage.findAll('offers', o => o.collectorPhone === phone);
+
+  if (offers.length === 0) {
+    await message.reply(lang === 'pid'
+      ? `📭 *No Offers Yet*\n\nNo buyer don make offer on your listings.\n\nPost a listing first so buyers can find your materials!`
+      : `📭 *No Offers Yet*\n\nNo buyers have made offers on your listings yet.\n\nMake sure you have active listings so buyers can find you!`);
+    return;
+  }
+
+  const statusEmoji = { pending: '⏳', accepted: '✅', rejected: '❌', countered: '🔄' };
+  const sorted = [...offers].reverse().slice(0, 8);
+
+  const lines = sorted.map(o => {
+    let line = `${statusEmoji[o.status] || '⏳'} *${o.id}*\n`;
+    line += `   From: ${o.buyerName}  |  ₦${o.offerPrice}/kg`;
+    if (o.counterPrice) line += `  →  Counter: ₦${o.counterPrice}/kg`;
+    line += `\n   Listing: ${o.listingId}  |  ${o.status.toUpperCase()}`;
+    return line;
+  }).join('\n\n');
+
+  const pending = offers.filter(o => o.status === 'pending');
+  const actionNote = pending.length > 0
+    ? `\n\n⚠️ *${pending.length} offer(s) waiting for your response!*\n\nTo respond, type:\n✅  accept [OFFER-ID]\n❌  reject [OFFER-ID]\n🔄  counter [OFFER-ID] [your price]`
+    : `\n\n_All offers have been responded to._`;
+
+  await message.reply(lang === 'pid'
+    ? `💬 *Your Incoming Offers:*\n\n${lines}${actionNote}`
+    : `💬 *Your Incoming Offers:*\n\n${lines}${actionNote}`);
 }
 
 // ── MAIN HANDLE ───────────────────────────────────────────────────────────────
@@ -375,4 +462,4 @@ async function handle(client, message, phone, sess) {
   if (['offer_listing_id','offer_price'].includes(sess.step)) return handleOffer(client, message, phone, sess);
 }
 
-module.exports = { handle, startListing, viewListings, handleOffer, handleOfferResponse };
+module.exports = { handle, startListing, viewListings, handleOffer, handleOfferResponse, viewCollectorOffers };

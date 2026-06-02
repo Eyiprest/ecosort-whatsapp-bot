@@ -362,6 +362,32 @@ async function handle(client, message, phone, sess) {
   }
   if (['col_help_menu','col_help_topic'].includes(sess.step)) return handleHelp(client, message, phone, sess);
 
+  // ── MARKETPLACE SUB-MENU ─────────────────────────────────────────────────────
+  if (sess.step === 'marketplace_sub') {
+    if (!isMenuChoice(rawBody, 3)) {
+      await message.reply(msg('invalidChoice', lang));
+      await message.reply(lang === 'pid'
+        ? `🛒 *Marketplace*\n\n1️⃣ Post New Listing\n2️⃣ My Incoming Offers\n3️⃣ Back\n\nReply with number.`
+        : `🛒 *Marketplace*\n\n1️⃣ Post New Listing\n2️⃣ My Incoming Offers\n3️⃣ Back\n\nReply with number.`);
+      return;
+    }
+    const mChoice = getMenuChoice(rawBody);
+    if (mChoice === 1) {
+      const { startListing } = require('./marketplace');
+      return startListing(client, message, phone, sess);
+    }
+    if (mChoice === 2) {
+      const { viewCollectorOffers } = require('./marketplace');
+      await viewCollectorOffers(client, message, phone, sess);
+      session.set(phone, { step: 'collector_menu' });
+      await message.reply(msg('collectorMenu', lang));
+      return;
+    }
+    session.set(phone, { step: 'collector_menu' });
+    await message.reply(msg('collectorMenu', lang));
+    return;
+  }
+
   if (body === 'register') {
     const existing = storage.findOne('collectors', c => c.phone === phone);
     if (existing) {
@@ -397,8 +423,11 @@ async function handle(client, message, phone, sess) {
       case 4: return viewMyRoute(client, message, phone, sess);
       case 5: return viewInventory(client, message, phone, sess);
       case 6: {
-        const { startListing } = require('./marketplace');
-        return startListing(client, message, phone, sess);
+        session.set(phone, { step: 'marketplace_sub' });
+        await message.reply(lang === 'pid'
+          ? `🛒 *Marketplace*\n\n1️⃣ Post New Listing\n2️⃣ My Incoming Offers\n3️⃣ Back\n\nReply with number.`
+          : `🛒 *Marketplace*\n\n1️⃣ Post New Listing\n2️⃣ My Incoming Offers\n3️⃣ Back\n\nReply with number.`);
+        return;
       }
       case 7: return viewEarnings(client, message, phone, sess);
       case 8: return viewProfile(client, message, phone, sess);

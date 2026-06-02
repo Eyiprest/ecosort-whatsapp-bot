@@ -410,8 +410,8 @@ async function handleIncomingMessage(message) {
       return;
     }
 
-    // Offer accept/reject from anywhere (collector workflow)
-    if (lBody.startsWith('accept ') || lBody.startsWith('reject ')) {
+    // Offer accept / reject / counter — work from anywhere in chat for both buyer and collector
+    if (lBody.startsWith('accept ') || lBody.startsWith('reject ') || lBody.startsWith('counter ')) {
       const handled = await marketplace.handleOfferResponse(client, message, phone, sess);
       if (handled) return;
     }
