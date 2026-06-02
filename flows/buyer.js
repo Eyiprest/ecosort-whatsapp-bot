@@ -262,28 +262,57 @@ async function handlePostPurchase(client, message, phone, sess) {
 
   if (body === '1' && certId) {
     const cert = storage.findOne('certificates', c => c.id === certId);
-    if (cert) {
-      await message.reply(lang === 'pid' ? '⏳ Generating PDF...' : '⏳ Generating certificate PDF...');
-      try {
-        const pdfBuffer = await generateCertificatePDF(cert);
-        await client.sendMessage(`${phone}@c.us`, {
-          document: pdfBuffer,
-          mimetype: 'application/pdf',
-          fileName: `EcoSort-ESG-Certificate-${cert.id}.pdf`,
-          caption:
-            `🌿 *ESG Certificate — ${cert.id}*\n` +
-            `Verification: ${cert.verificationCode}\n\n` +
-            `Download, save or forward this certificate for your ESG/CSR reporting.`
-        });
-      } catch (_) {
-        const { formatCertificateText } = require('./certificates');
-        await message.reply(formatCertificateText(cert));
-      }
+    if (!cert) {
+      await message.reply(lang === 'pid'
+        ? `❌ Certificate no dey. Open *ESG Certificates* from your dashboard.\nCertificate ID: *${certId}*`
+        : `❌ Certificate not found. Open *ESG Certificates* from your dashboard.\nCertificate ID: *${certId}*`);
+    } else {
+      await sendCertificate(client, message, phone, cert, lang);
     }
   }
 
   session.set(phone, { step: 'buyer_menu' });
   await message.reply(msg('buyerMenu', lang));
+}
+
+// ── SHARED PDF SEND WITH FALLBACKS ────────────────────────────────────────────
+async function sendCertificate(client, message, phone, cert, lang) {
+  await message.reply(lang === 'pid' ? '⏳ Generating PDF...' : '⏳ Generating certificate PDF...');
+
+  // Attempt 1: PDF via WhatsApp document
+  try {
+    const pdfBuffer = await generateCertificatePDF(cert);
+    await client.sendMessage(`${phone}@c.us`, {
+      document: pdfBuffer,
+      mimetype: 'application/pdf',
+      fileName: `EcoSort-ESG-${cert.id}.pdf`,
+      caption: `🌿 ${cert.id} | Verify: ${cert.verificationCode}`
+    });
+    return; // success
+  } catch (pdfErr) {
+    console.error('[PDF] Generation/send failed:', pdfErr.message);
+  }
+
+  // Attempt 2: Text certificate
+  try {
+    await message.reply(formatCertificateText(cert));
+    await message.reply(lang === 'pid'
+      ? `⚠️ PDF no fit generate. Text version don send above.\n\nYou fit contact support@ecosort.com with your Certificate ID to get the PDF.`
+      : `⚠️ PDF could not be generated. Text version sent above.\n\nContact support@ecosort.com with your Certificate ID to receive the PDF by email.`);
+    return;
+  } catch (textErr) {
+    console.error('[PDF] Text fallback failed:', textErr.message);
+  }
+
+  // Attempt 3: Bare minimum — cert ID and verification code
+  await message.reply(
+    `🌿 *ESG Certificate*\n\n` +
+    `Certificate ID: *${cert.id}*\n` +
+    `Verification Code: *${cert.verificationCode}*\n` +
+    `Material: ${cert.material}  |  ${cert.quantity}kg\n` +
+    `Buyer: ${cert.buyerName}\n\n` +
+    `Contact support@ecosort.com with your Certificate ID to receive the PDF.`
+  );
 }
 
 // ── MAKE OFFER PRICE — enter price after choosing "Make Offer" ────────────────
@@ -484,29 +513,7 @@ async function handleCertDownload(client, message, phone, sess) {
     return;
   }
 
-  await message.reply(lang === 'pid'
-    ? `⏳ Generating your certificate PDF... hold on.`
-    : `⏳ Generating your certificate PDF, please wait...`);
-
-  try {
-    const pdfBuffer = await generateCertificatePDF(cert);
-    const fileName = `EcoSort-ESG-Certificate-${cert.id}.pdf`;
-
-    await client.sendMessage(`${phone}@c.us`, {
-      document: pdfBuffer,
-      mimetype: 'application/pdf',
-      fileName,
-      caption: lang === 'pid'
-        ? `🌿 *ESG Certificate — ${cert.id}*\n\nYou fit download am, save am, or share am directly from WhatsApp.\n\nVerification code: *${cert.verificationCode}*`
-        : `🌿 *ESG Certificate — ${cert.id}*\n\nDownload, save, or forward directly from WhatsApp.\n\nVerification code: *${cert.verificationCode}*`
-    });
-  } catch (err) {
-    // Fallback: send the text version if PDF fails
-    await message.reply(formatCertificateText(cert));
-    await message.reply(lang === 'pid'
-      ? `⚠️ PDF no generate. We don send text version instead. Contact support@ecosort.com to get proper PDF.`
-      : `⚠️ PDF could not be generated. Text version sent above. Contact support@ecosort.com for the full PDF.`);
-  }
+  await sendCertificate(client, message, phone, cert, lang);
 
   session.set(phone, { step: 'buyer_menu' });
   await message.reply(msg('buyerMenu', lang));

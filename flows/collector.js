@@ -433,6 +433,38 @@ async function viewProfile(client, message, phone, sess) {
   await message.reply(msg('collectorMenu', lang));
 }
 
+// ── MY LISTINGS ───────────────────────────────────────────────────────────────
+async function viewMyListings(client, message, phone, sess) {
+  const lang = sess.lang;
+  const listings = storage.findAll('listings', l => l.collectorPhone === phone);
+
+  if (listings.length === 0) {
+    await message.reply(lang === 'pid'
+      ? `📭 *No Listings Yet*\n\nYou never post any listing.\n\nGo to *Post New Listing* to list your materials for buyers!`
+      : `📭 *No Listings Yet*\n\nYou haven't posted any listings.\n\nGo to *Post New Listing* to list your collected materials for buyers!`);
+    return;
+  }
+
+  const statusEmoji = { available: '🟢', sold: '✅', inactive: '⏸️', expired: '❌' };
+  const sorted = [...listings].reverse().slice(0, 8);
+
+  const lines = sorted.map((l, i) =>
+    `*${i + 1}.* ${materialEmoji(l.material)} *${l.material}*\n` +
+    `   ${l.quantity}kg  |  ₦${l.pricePerKg}/kg  |  💵 ₦${l.totalValue.toLocaleString()}\n` +
+    `   📍 ${l.location}  |  ${statusEmoji[l.status] || '⚪'} ${l.status.toUpperCase()}\n` +
+    `   🆔 ${l.id}`
+  ).join('\n\n');
+
+  const active = listings.filter(l => l.status === 'available').length;
+  const sold   = listings.filter(l => l.status === 'sold').length;
+
+  await message.reply(
+    (lang === 'pid' ? `📋 *Your Listings:*\n\n` : `📋 *Your Listings:*\n\n`) +
+    lines +
+    `\n\n📊 Active: *${active}*  |  Sold: *${sold}*  |  Total: ${listings.length}`
+  );
+}
+
 // ── HELP CENTER ───────────────────────────────────────────────────────────────
 async function handleHelp(client, message, phone, sess) {
   const lang = sess.lang;
@@ -497,11 +529,11 @@ async function handle(client, message, phone, sess) {
 
   // ── MARKETPLACE SUB-MENU ─────────────────────────────────────────────────────
   if (sess.step === 'marketplace_sub') {
-    if (!isMenuChoice(rawBody, 3)) {
+    if (!isMenuChoice(rawBody, 4)) {
       await message.reply(msg('invalidChoice', lang));
       await message.reply(lang === 'pid'
-        ? `🛒 *Marketplace*\n\n1️⃣ Post New Listing\n2️⃣ My Incoming Offers\n3️⃣ Back\n\nReply with number.`
-        : `🛒 *Marketplace*\n\n1️⃣ Post New Listing\n2️⃣ My Incoming Offers\n3️⃣ Back\n\nReply with number.`);
+        ? `🛒 *Marketplace*\n\n1️⃣ Post New Listing\n2️⃣ My Listings\n3️⃣ My Incoming Offers\n4️⃣ Back\n\nReply with number.`
+        : `🛒 *Marketplace*\n\n1️⃣ Post New Listing\n2️⃣ My Listings\n3️⃣ My Incoming Offers\n4️⃣ Back\n\nReply with number.`);
       return;
     }
     const mChoice = getMenuChoice(rawBody);
@@ -510,6 +542,12 @@ async function handle(client, message, phone, sess) {
       return startListing(client, message, phone, sess);
     }
     if (mChoice === 2) {
+      await viewMyListings(client, message, phone, sess);
+      session.set(phone, { step: 'collector_menu' });
+      await message.reply(msg('collectorMenu', lang));
+      return;
+    }
+    if (mChoice === 3) {
       const { viewCollectorOffers } = require('./marketplace');
       await viewCollectorOffers(client, message, phone, sess);
       session.set(phone, { step: 'collector_menu' });
@@ -563,8 +601,8 @@ async function handle(client, message, phone, sess) {
       case 6: {
         session.set(phone, { step: 'marketplace_sub' });
         await message.reply(lang === 'pid'
-          ? `🛒 *Marketplace*\n\n1️⃣ Post New Listing\n2️⃣ My Incoming Offers\n3️⃣ Back\n\nReply with number.`
-          : `🛒 *Marketplace*\n\n1️⃣ Post New Listing\n2️⃣ My Incoming Offers\n3️⃣ Back\n\nReply with number.`);
+          ? `🛒 *Marketplace*\n\n1️⃣ Post New Listing\n2️⃣ My Listings\n3️⃣ My Incoming Offers\n4️⃣ Back\n\nReply with number.`
+          : `🛒 *Marketplace*\n\n1️⃣ Post New Listing\n2️⃣ My Listings\n3️⃣ My Incoming Offers\n4️⃣ Back\n\nReply with number.`);
         return;
       }
       case 7: return viewEarnings(client, message, phone, sess);
