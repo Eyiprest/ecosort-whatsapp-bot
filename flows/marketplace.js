@@ -457,45 +457,50 @@ async function startListing(client, message, phone, sess) {
     : `♻️ *Post Listing*\n\nWhat material are you listing?\n\n${matList}\n\nReply with number.`);
 }
 
-// ── COLLECTOR: VIEW ALL OFFERS (demo — visible to any collector) ──────────────
+// ── COLLECTOR: VIEW ALL OFFERS — numbered, interactive select ─────────────────
 async function viewCollectorOffers(client, message, phone, sess) {
   const lang = sess.lang;
 
-  // DEMO MODE: all collectors can see all pending offers so the full
-  // negotiation flow can be demonstrated without a per-collector backend.
+  // Demo: all pending offers visible to any collector
   const pending  = storage.findAll('offers', o => o.status === 'pending' || o.status === 'countered');
-  const myOffers = storage.findAll('offers', o => o.collectorPhone === phone && !['pending','countered'].includes(o.status));
-  const offers   = [...pending, ...myOffers].slice(0, 10);
+  const myResolved = storage.findAll('offers', o => o.collectorPhone === phone && ['accepted','rejected'].includes(o.status));
+  const offers = [...pending, ...myResolved].slice(0, 10);
 
   if (offers.length === 0) {
     await message.reply(lang === 'pid'
-      ? `📭 *No Offers Yet*\n\nNo buyer don submit any offer yet.\n\nMake sure you have active listings so buyers can find your materials!`
-      : `📭 *No Offers Yet*\n\nNo buyers have submitted offers yet.\n\nMake sure you have active listings so buyers can find your materials!`);
+      ? `📭 *No Offers Yet*\n\nNo buyer don submit any offer.\n\nPost a listing first so buyers can find your materials!`
+      : `📭 *No Offers Yet*\n\nNo buyers have submitted offers yet.\n\nPost a listing so buyers can find your materials!`);
     return;
   }
 
   const statusEmoji = { pending: '⏳', accepted: '✅', rejected: '❌', countered: '🔄' };
-
-  const lines = offers.map(o => {
+  const lines = offers.map((o, i) => {
     const listing = storage.findOne('listings', l => l.id === o.listingId);
-    const mat = listing ? `${materialEmoji(listing.material)} ${listing.material} ${listing.quantity}kg` : o.listingId;
-    let line = `${statusEmoji[o.status] || '⏳'} *${o.id}*\n`;
+    const mat = listing
+      ? `${materialEmoji(listing.material)} ${listing.material}  |  ${listing.quantity}kg`
+      : o.listingId;
+    let line = `*${i + 1}.* ${statusEmoji[o.status] || '⏳'} *${o.id}*\n`;
     line += `   ${mat}\n`;
-    line += `   From: ${o.buyerName}  |  Offer: *₦${o.offerPrice}/kg*`;
+    line += `   From: *${o.buyerName}*  |  Offer: *₦${o.offerPrice}/kg*`;
     if (o.counterPrice) line += `\n   Your Counter: ₦${o.counterPrice}/kg`;
     line += `\n   Status: ${o.status.toUpperCase()}`;
     return line;
   }).join('\n\n');
 
-  const needsResponse = offers.filter(o => o.status === 'pending' || o.status === 'countered');
-  const actionNote = needsResponse.length > 0
-    ? `\n\n⚠️ *${needsResponse.length} offer(s) need a response:*\n\nType one of:\n✅  accept [OFFER-ID]\n❌  reject [OFFER-ID]\n🔄  counter [OFFER-ID] [price]`
-    : `\n\n_No pending offers require action._`;
+  const needsResponse = offers.filter(o => ['pending','countered'].includes(o.status)).length;
+  const prompt = needsResponse > 0
+    ? (lang === 'pid'
+      ? `\n\n⚠️ *${needsResponse} offer(s) dey wait for your response!*\n\nReply with a number (1–${offers.length}) to respond.\nOr *0* to go back.`
+      : `\n\n⚠️ *${needsResponse} offer(s) awaiting your response!*\n\nReply with a number (1–${offers.length}) to respond.\nOr *0* to go back.`)
+    : `\n\nAll offers resolved. Type *0* to go back.`;
 
   await message.reply(
     (lang === 'pid' ? `💬 *All Incoming Offers:*\n\n` : `💬 *All Incoming Offers:*\n\n`) +
-    lines + actionNote
+    lines + prompt
   );
+
+  session.setData(phone, 'collectorOfferIds', offers.map(o => o.id));
+  session.set(phone, { step: 'col_offer_select' });
 }
 
 // ── MAIN HANDLE ───────────────────────────────────────────────────────────────

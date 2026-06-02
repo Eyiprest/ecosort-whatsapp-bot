@@ -433,6 +433,261 @@ async function viewProfile(client, message, phone, sess) {
   await message.reply(msg('collectorMenu', lang));
 }
 
+// ── OFFER SELECT — collector picks an offer by number ────────────────────────
+async function handleColOfferSelect(client, message, phone, sess) {
+  const body = message.body.trim();
+  const lang = sess.lang;
+  const offerIds = (sess.data && sess.data.collectorOfferIds) || [];
+
+  if (body === '0') {
+    session.set(phone, { step: 'collector_menu' });
+    await message.reply(msg('collectorMenu', lang));
+    return;
+  }
+
+  const idx = parseInt(body, 10);
+  if (isNaN(idx) || idx < 1 || idx > offerIds.length) {
+    await message.reply(lang === 'pid'
+      ? `❌ Reply with a number between 1 and ${offerIds.length}, or 0 to go back.`
+      : `❌ Reply with a number between 1 and ${offerIds.length}, or 0 to go back.`);
+    return;
+  }
+
+  const offerId = offerIds[idx - 1];
+  const offer   = storage.findOne('offers', o => o.id === offerId);
+
+  if (!offer) {
+    await message.reply(lang === 'pid' ? '⚠️ Offer no dey. Refreshing...' : '⚠️ Offer not found. Refreshing...');
+    const { viewCollectorOffers } = require('./marketplace');
+    await viewCollectorOffers(client, message, phone, sess);
+    return;
+  }
+
+  const listing     = storage.findOne('listings', l => l.id === offer.listingId);
+  const canRespond  = ['pending', 'countered'].includes(offer.status);
+
+  session.setData(phone, 'selectedOfferId', offerId);
+  session.set(phone, { step: 'col_offer_action' });
+
+  const details =
+    `💬 *Offer Details*\n\n` +
+    `Offer ID: *${offer.id}*\n` +
+    (listing ? `${materialEmoji(listing.material)} ${listing.material}  |  ${listing.quantity}kg\n` : '') +
+    `From: *${offer.buyerName}*\n` +
+    `Their Offer: *₦${offer.offerPrice}/kg*\n` +
+    (listing ? `Your Listed Price: ₦${listing.pricePerKg}/kg\n` : '') +
+    (offer.counterPrice ? `Your Previous Counter: ₦${offer.counterPrice}/kg\n` : '') +
+    `Status: ${offer.status.toUpperCase()}\n\n`;
+
+  if (canRespond) {
+    await message.reply(details +
+      (lang === 'pid'
+        ? `Wetin you wan do?\n\n1️⃣ Accept Offer (₦${offer.offerPrice}/kg)\n2️⃣ Reject Offer\n3️⃣ Counter with Different Price\n4️⃣ Back\n\nReply with number.`
+        : `What would you like to do?\n\n1️⃣ Accept Offer (₦${offer.offerPrice}/kg)\n2️⃣ Reject Offer\n3️⃣ Counter with Different Price\n4️⃣ Back\n\nReply with number.`)
+    );
+  } else {
+    await message.reply(details +
+      (lang === 'pid'
+        ? `This offer don already *${offer.status}*.\n\n1️⃣ Back to Offers\n\nReply with 1.`
+        : `This offer has already been *${offer.status}*.\n\n1️⃣ Back to Offers\n\nReply with 1.`)
+    );
+  }
+}
+
+// ── OFFER ACTION — accept / reject / counter ──────────────────────────────────
+async function handleColOfferAction(client, message, phone, sess) {
+  const body    = message.body.trim();
+  const lang    = sess.lang;
+  const offerId = sess.data && sess.data.selectedOfferId;
+  const offer   = storage.findOne('offers', o => o.id === offerId);
+
+  if (!offer) {
+    session.set(phone, { step: 'collector_menu' });
+    await message.reply(msg('collectorMenu', lang));
+    return;
+  }
+
+  const canRespond = ['pending', 'countered'].includes(offer.status);
+  const listing    = storage.findOne('listings', l => l.id === offer.listingId);
+
+  // Already responded — only option is "Back"
+  if (!canRespond) {
+    if (body === '1') {
+      const { viewCollectorOffers } = require('./marketplace');
+      await viewCollectorOffers(client, message, phone, sess);
+      return;
+    }
+    await message.reply(msg('invalidChoice', lang));
+    return;
+  }
+
+  if (!isMenuChoice(body, 4)) {
+    await message.reply(msg('invalidChoice', lang));
+    return;
+  }
+
+  const choice = getMenuChoice(body);
+
+  if (choice === 4) {
+    const { viewCollectorOffers } = require('./marketplace');
+    await viewCollectorOffers(client, message, phone, sess);
+    return;
+  }
+
+  if (choice === 3) {
+    session.set(phone, { step: 'col_offer_counter_price' });
+    await message.reply(lang === 'pid'
+      ? `🔄 *Counter Offer*\n\nEnter your counter price per kg (₦):\n_e.g. 180_\n\nOr *0* to go back.`
+      : `🔄 *Counter Offer*\n\nEnter your counter price per kg (₦):\n_e.g. 180_\n\nOr *0* to go back.`);
+    return;
+  }
+
+  if (choice === 2) {
+    // ── REJECT ────────────────────────────────────────────────────────────────
+    storage.update('offers', o => o.id === offer.id, { status: 'rejected', updatedAt: timestamp() });
+    try {
+      await client.sendMessage(`${offer.buyerPhone}@c.us`,
+        `❌ *Offer Declined*\n\n` +
+        `Offer ID: *${offer.id}* was declined by the collector.\n\n` +
+        `You can make a new offer or browse other listings from your Buyer Dashboard.`
+      );
+    } catch (_) {}
+
+    await message.reply(
+      `❌ *Offer Rejected*\n\n` +
+      `Offer: ${offer.id}\n` +
+      `The buyer has been notified.`
+    );
+    session.set(phone, { step: 'collector_menu' });
+    await message.reply(msg('collectorMenu', lang));
+    return;
+  }
+
+  // ── ACCEPT (choice === 1) ──────────────────────────────────────────────────
+  const agreedPrice = offer.counterPrice || offer.offerPrice;
+  const qty         = listing ? listing.quantity : 0;
+  const totalValue  = qty * agreedPrice;
+  const txnId       = generateId('TXN');
+
+  storage.update('offers', o => o.id === offer.id, { status: 'accepted', updatedAt: timestamp() });
+  storage.insert('transactions', {
+    id: txnId,
+    offerId: offer.id,
+    listingId: offer.listingId,
+    buyerPhone: offer.buyerPhone,
+    collectorPhone: phone,
+    material: listing ? listing.material : 'Unknown',
+    quantity: qty,
+    agreedPrice,
+    totalValue,
+    status: 'confirmed',
+    gps: `6.${Math.floor(Math.random() * 9999)}, 3.${Math.floor(Math.random() * 9999)}`,
+    createdAt: timestamp()
+  });
+  if (listing) {
+    storage.update('listings', l => l.id === listing.id, { status: 'sold', updatedAt: timestamp() });
+  }
+
+  // Generate ESG certificate
+  const { generateCertificate } = require('./certificates');
+  const buyer = storage.findOne('buyers', b => b.phone === offer.buyerPhone);
+  generateCertificate(
+    { id: txnId, offerId: offer.id, listingId: offer.listingId, buyerPhone: offer.buyerPhone,
+      collectorPhone: phone, material: listing ? listing.material : 'Unknown', quantity: qty,
+      agreedPrice, totalValue, status: 'confirmed',
+      gps: `6.0000, 3.0000`, createdAt: new Date().toISOString() },
+    buyer ? buyer.companyName : 'Buyer'
+  );
+
+  // Notify buyer
+  const mat = listing ? `${materialEmoji(listing.material)} ${listing.material}` : '';
+  try {
+    await client.sendMessage(`${offer.buyerPhone}@c.us`,
+      `✅ *Offer Accepted — Deal Done!*\n\n` +
+      `Transaction ID: *${txnId}*\n` +
+      `${mat}  |  ${qty}kg\n` +
+      `Agreed Price: *₦${agreedPrice}/kg*\n` +
+      `Total Value: *₦${totalValue.toLocaleString()}*\n\n` +
+      `Check *My Transactions* in your dashboard.\n` +
+      `Your ESG Certificate is now ready to download from *ESG Certificates*. 🎉`
+    );
+  } catch (_) {}
+
+  await message.reply(
+    `✅ *Offer Accepted!*\n\n` +
+    `Transaction ID: *${txnId}*\n` +
+    `Buyer: ${offer.buyerName}\n` +
+    `${mat}  |  ${qty}kg\n` +
+    `Agreed Price: *₦${agreedPrice}/kg*\n` +
+    `Total: *₦${totalValue.toLocaleString()}*\n\n` +
+    `The buyer has been notified. Arrange pickup/delivery with them. 🤝`
+  );
+  session.set(phone, { step: 'collector_menu' });
+  await message.reply(msg('collectorMenu', lang));
+}
+
+// ── OFFER COUNTER PRICE — collector enters their counter price ─────────────────
+async function handleColOfferCounter(client, message, phone, sess) {
+  const body    = message.body.trim();
+  const lang    = sess.lang;
+  const offerId = sess.data && sess.data.selectedOfferId;
+
+  if (body === '0') {
+    // Back to offer detail
+    session.set(phone, { step: 'col_offer_select' });
+    const offerIds = (sess.data && sess.data.collectorOfferIds) || [];
+    const idx = offerIds.indexOf(offerId);
+    await message.reply(lang === 'pid'
+      ? `Reply with a number (1–${offerIds.length}) to select an offer, or 0 to go back.`
+      : `Reply with a number (1–${offerIds.length}) to select an offer, or 0 to go back.`);
+    return;
+  }
+
+  if (!isPositiveNumber(body)) {
+    await message.reply(lang === 'pid' ? '❌ Enter valid price in ₦ (e.g. 180):' : '❌ Enter a valid price in ₦ (e.g. 180):');
+    return;
+  }
+
+  const counterPrice = parseFloat(body);
+  const offer        = storage.findOne('offers', o => o.id === offerId);
+
+  if (!offer) {
+    session.set(phone, { step: 'collector_menu' });
+    await message.reply(msg('collectorMenu', lang));
+    return;
+  }
+
+  storage.update('offers', o => o.id === offer.id, {
+    status: 'countered',
+    counterPrice,
+    updatedAt: timestamp()
+  });
+
+  // Notify buyer
+  try {
+    await client.sendMessage(`${offer.buyerPhone}@c.us`,
+      `🔄 *Counter Offer Received!*\n\n` +
+      `Offer ID: *${offer.id}*\n` +
+      `Your Offer: ₦${offer.offerPrice}/kg\n` +
+      `Collector's Counter: *₦${counterPrice}/kg*\n\n` +
+      `To respond, type:\n` +
+      `✅  accept ${offer.id}    (agree to ₦${counterPrice}/kg)\n` +
+      `❌  reject ${offer.id}    (decline)\n\n` +
+      `Or check *My Offers* in your dashboard to respond.`
+    );
+  } catch (_) {}
+
+  await message.reply(
+    `🔄 *Counter Offer Sent!*\n\n` +
+    `Offer: *${offer.id}*\n` +
+    `Counter Price: *₦${counterPrice}/kg*\n\n` +
+    `The buyer has been notified and will respond shortly.\n` +
+    `Check *My Offers* in Marketplace to track the response.`
+  );
+  session.set(phone, { step: 'collector_menu' });
+  await message.reply(msg('collectorMenu', lang));
+}
+
 // ── MY LISTINGS ───────────────────────────────────────────────────────────────
 async function viewMyListings(client, message, phone, sess) {
   const lang = sess.lang;
@@ -522,6 +777,9 @@ async function handle(client, message, phone, sess) {
   if (sess.step === 'col_pickup_select') return handlePickupSelect(client, message, phone, sess);
   if (sess.step === 'col_pickup_confirm') return handlePickupConfirm(client, message, phone, sess);
   if (sess.step === 'col_accept_id') return handleAcceptPickup(client, message, phone, sess);
+  if (sess.step === 'col_offer_select') return handleColOfferSelect(client, message, phone, sess);
+  if (sess.step === 'col_offer_action') return handleColOfferAction(client, message, phone, sess);
+  if (sess.step === 'col_offer_counter_price') return handleColOfferCounter(client, message, phone, sess);
   if (['col_complete_id','col_complete_material','col_complete_weight'].includes(sess.step)) {
     return handleCompletePickup(client, message, phone, sess);
   }
