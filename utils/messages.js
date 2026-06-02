@@ -2320,6 +2320,15 @@ const langChanged = {
   pid: `✅ Language switched to Pidgin.`
 };
 
+// Flat shortcuts so flow files can call msg('retry', lang) without the 'errors.' prefix
+const invalidChoice = errors.invalidChoice;
+const invalidPhone = errors.invalidPhone;
+const invalidName = errors.invalidName;
+const invalidQuantity = errors.invalidQuantity;
+const notRegistered = errors.notRegistered;
+const alreadyRegistered = errors.alreadyRegistered;
+const retry = errors.retry;
+
 const allScreens = {
   onboarding,
   welcome,
@@ -2344,7 +2353,15 @@ const allScreens = {
   errors,
   confirmation,
   registered,
-  langChanged
+  langChanged,
+  // flat error shortcuts
+  invalidChoice,
+  invalidPhone,
+  invalidName,
+  invalidQuantity,
+  notRegistered,
+  alreadyRegistered,
+  retry
 };
 
 function screen(obj, lang, ...args) {

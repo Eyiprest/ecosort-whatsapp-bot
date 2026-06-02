@@ -61,7 +61,7 @@ async function handleRegistration(client, message, phone, sess) {
       return;
     }
     case 'reg_address': {
-      if (body.length < 10) { await message.reply(msg('retry', lang)); return; }
+      if (body.length < 5) { await message.reply(msg('retry', lang)); return; }
       session.setData(phone, 'regAddress', body);
       session.set(phone, { step: 'reg_household_size' });
       await message.reply(lang === 'pid'
@@ -156,7 +156,7 @@ async function handlePickupRequest(client, message, phone, sess) {
       return;
     }
     case 'pickup_address_new': {
-      if (body.length < 10) { await message.reply(msg('retry', lang)); return; }
+      if (body.length < 5) { await message.reply(msg('retry', lang)); return; }
       session.setData(phone, 'pickupAddress', body);
       session.set(phone, { step: 'pickup_day' });
       const dayList = DAYS.map((d, i) => `${i + 1}. ${d}`).join('\n');
