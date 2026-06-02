@@ -76,32 +76,162 @@ async function handleRegistration(client, message, phone, sess) {
   }
 }
 
-// ── 1. NEARBY PICKUPS ────────────────────────────────────────────────────────
+// ── 1. AVAILABLE PICKUPS — numbered list, pick by number ─────────────────────
 async function viewNearbyPickups(client, message, phone, sess) {
   const lang = sess.lang;
-  const collector = storage.findOne('collectors', c => c.phone === phone);
   const requests = storage.findAll('pickups', p => p.status === 'requested');
 
   if (requests.length === 0) {
-    await message.reply(lang === 'pid' ? '📭 No pickup request dey available now.' : '📭 No pickup requests available right now.');
+    await message.reply(lang === 'pid'
+      ? `📭 *No Pickups Available*\n\nNo pickup request dey right now.\n\nCheck back later or type *menu* to return.`
+      : `📭 *No Pickups Available*\n\nThere are no pickup requests right now.\n\nCheck back later or type *menu* to return.`);
+    session.set(phone, { step: 'collector_menu' });
+    return;
+  }
+
+  const shown = requests.slice(0, 6);
+  const list = shown.map((p, i) => {
+    const kg = p.quantityKg || p.bags || 0;
+    return (
+      `*${i + 1}.* ♻️ ${p.wasteType}  |  ⚖️ ${kg}kg\n` +
+      `   👤 ${p.userName || 'Household'}  |  📍 ${p.address}\n` +
+      `   ⏰ ${p.preferredDay || ''} ${p.preferredTime || ''}`.trim()
+    );
+  }).join('\n\n');
+
+  await message.reply(
+    (lang === 'pid'
+      ? `📋 *Available Pickups (${shown.length}):*`
+      : `📋 *Available Pickup Requests (${shown.length}):*`) +
+    `\n\n${list}\n\n` +
+    (lang === 'pid'
+      ? `Reply with a number (1–${shown.length}) to select a pickup.\nOr *0* to go back.`
+      : `Reply with a number (1–${shown.length}) to view details and accept.\nOr *0* to go back.`)
+  );
+
+  session.setData(phone, 'availablePickupIds', shown.map(p => p.id));
+  session.set(phone, { step: 'col_pickup_select' });
+}
+
+// ── 1b. PICKUP SELECTED — show detail + confirm ───────────────────────────────
+async function handlePickupSelect(client, message, phone, sess) {
+  const body = message.body.trim();
+  const lang = sess.lang;
+  const pickupIds = (sess.data && sess.data.availablePickupIds) || [];
+
+  if (body === '0') {
     session.set(phone, { step: 'collector_menu' });
     await message.reply(msg('collectorMenu', lang));
     return;
   }
 
-  const list = requests.slice(0, 5).map((p, i) =>
-    `*${i + 1}. ${p.id}*\n👤 ${p.userName} | ♻️ ${p.wasteType}\n📦 ${p.bags} bags | 📍 ${p.address}\n⏰ ${p.preferredTime}`
-  ).join('\n\n');
+  const idx = parseInt(body, 10);
+  if (isNaN(idx) || idx < 1 || idx > pickupIds.length) {
+    await message.reply(lang === 'pid'
+      ? `❌ Reply with a number between 1 and ${pickupIds.length}, or 0 to go back.`
+      : `❌ Please reply with a number between 1 and ${pickupIds.length}, or 0 to go back.`);
+    return;
+  }
 
-  await message.reply(lang === 'pid'
-    ? `📋 *Available Pickups:*\n\n${list}\n\nType *2* from menu to accept a pickup.`
-    : `📋 *Available Pickup Requests:*\n\n${list}\n\nType *2* from menu to accept a pickup.`);
+  const pickupId = pickupIds[idx - 1];
+  const pickup = storage.findOne('pickups', p => p.id === pickupId);
+
+  if (!pickup || pickup.status !== 'requested') {
+    await message.reply(lang === 'pid'
+      ? '⚠️ That pickup don already taken by another collector. Refreshing list...'
+      : '⚠️ That pickup was just taken. Refreshing the list...');
+    return viewNearbyPickups(client, message, phone, sess);
+  }
+
+  const kg = pickup.quantityKg || pickup.bags || 0;
+  const estimatedEarnings = Math.round(kg * 50);
+
+  session.setData(phone, 'selectedPickupId', pickupId);
+  session.set(phone, { step: 'col_pickup_confirm' });
+
+  await message.reply(
+    `📋 *Pickup Details*\n\n` +
+    `♻️ *${pickup.wasteType}*\n` +
+    `⚖️ Quantity: ${kg}kg\n` +
+    `👤 Household: ${pickup.userName || 'Household User'}\n` +
+    `📍 Address: ${pickup.address}\n` +
+    `⏰ Preferred: ${pickup.preferredDay || 'TBD'}, ${pickup.preferredTime || 'TBD'}\n` +
+    `💰 Est. Earnings: ₦${estimatedEarnings.toLocaleString()}\n\n` +
+    (lang === 'pid'
+      ? `1️⃣ Accept this Pickup\n2️⃣ Skip — see next\n3️⃣ Back to menu\n\nReply with number.`
+      : `1️⃣ Accept this Pickup\n2️⃣ Skip — view next\n3️⃣ Back to menu\n\nReply with number.`)
+  );
+}
+
+// ── 1c. PICKUP CONFIRM — accept / skip / back ─────────────────────────────────
+async function handlePickupConfirm(client, message, phone, sess) {
+  const body = message.body.trim();
+  const lang = sess.lang;
+
+  if (!isMenuChoice(body, 3)) {
+    await message.reply(msg('invalidChoice', lang));
+    return;
+  }
+
+  const choice = getMenuChoice(body);
+  const pickupId = sess.data && sess.data.selectedPickupId;
+
+  if (choice === 2) {
+    // Skip — show remaining available pickups
+    return viewNearbyPickups(client, message, phone, sess);
+  }
+  if (choice === 3) {
+    session.set(phone, { step: 'collector_menu' });
+    await message.reply(msg('collectorMenu', lang));
+    return;
+  }
+
+  // Accept
+  const pickup = storage.findOne('pickups', p => p.id === pickupId);
+  if (!pickup || pickup.status !== 'requested') {
+    await message.reply(lang === 'pid'
+      ? '⚠️ That pickup don already taken. Showing updated list...'
+      : '⚠️ That pickup was just claimed. Showing updated list...');
+    return viewNearbyPickups(client, message, phone, sess);
+  }
+
+  const collector = storage.findOne('collectors', c => c.phone === phone);
+  storage.update('pickups', p => p.id === pickup.id, {
+    status: 'assigned',
+    collectorId: collector ? collector.id : phone,
+    collectorName: collector ? collector.name : 'Collector',
+    collectorPhone: phone,
+    updatedAt: timestamp()
+  });
+
+  // Notify household
+  try {
+    await client.sendMessage(`${pickup.userPhone}@c.us`,
+      lang === 'pid'
+        ? `🚛 *Collector Assigned!*\n\nPickup ID: *${pickup.id}*\nCollector: *${collector ? collector.name : 'Collector'}*\nStatus: 🔵 On the way\n\nYour collector don accept your pickup! They go reach you soon at your preferred time.`
+        : `🚛 *Collector Assigned!*\n\nPickup ID: *${pickup.id}*\nCollector: *${collector ? collector.name : 'Collector'}*\nStatus: 🔵 On the way\n\nYour pickup has been accepted! Your collector will arrive at the scheduled time.`
+    );
+  } catch (_) {}
+
+  const kg = pickup.quantityKg || pickup.bags || 0;
+
+  await message.reply(
+    `✅ *Pickup Accepted!*\n\n` +
+    `ID: *${pickup.id}*\n` +
+    `♻️ ${pickup.wasteType}  |  ⚖️ ${kg}kg\n` +
+    `👤 ${pickup.userName || 'Household'}\n` +
+    `📍 ${pickup.address}\n` +
+    `⏰ ${pickup.preferredDay || 'TBD'}, ${pickup.preferredTime || 'TBD'}\n\n` +
+    (lang === 'pid'
+      ? `Household don get notification. Check your route from menu. 🗺️`
+      : `Household has been notified. Check your route from the menu. 🗺️`)
+  );
 
   session.set(phone, { step: 'collector_menu' });
   await message.reply(msg('collectorMenu', lang));
 }
 
-// ── 2. ACCEPT PICKUP ─────────────────────────────────────────────────────────
+// ── 2. ACCEPT PICKUP by ID (fallback — for direct ID entry) ───────────────────
 async function handleAcceptPickup(client, message, phone, sess) {
   const body = message.body.trim();
   const lang = sess.lang;
@@ -135,9 +265,10 @@ async function handleAcceptPickup(client, message, phone, sess) {
       );
     } catch (_) {}
 
+    const kg = pickup.quantityKg || pickup.bags || 0;
     await message.reply(lang === 'pid'
-      ? `✅ You don accept Pickup *${pickup.id}*!\n\n👤 ${pickup.userName}\n📍 ${pickup.address}\n⏰ ${pickup.preferredTime}\n\nType *3* to complete when done.`
-      : `✅ Pickup *${pickup.id}* accepted!\n\n👤 ${pickup.userName}\n📍 ${pickup.address}\n⏰ ${pickup.preferredTime}\n\nType *3* when you're ready to complete.`);
+      ? `✅ You don accept Pickup *${pickup.id}*!\n\n👤 ${pickup.userName}\n📍 ${pickup.address}\n⚖️ ${kg}kg\n\nType *3* to complete when done.`
+      : `✅ Pickup *${pickup.id}* accepted!\n\n👤 ${pickup.userName}\n📍 ${pickup.address}\n⚖️ ${kg}kg\n\nUse *Complete Pickup* when you're done.`);
 
     session.set(phone, { step: 'collector_menu' });
     await message.reply(msg('collectorMenu', lang));
@@ -356,6 +487,8 @@ async function handle(client, message, phone, sess) {
   if (['col_reg_name','col_reg_phone','col_reg_area','col_reg_specialty','col_reg_vehicle'].includes(sess.step)) {
     return handleRegistration(client, message, phone, sess);
   }
+  if (sess.step === 'col_pickup_select') return handlePickupSelect(client, message, phone, sess);
+  if (sess.step === 'col_pickup_confirm') return handlePickupConfirm(client, message, phone, sess);
   if (sess.step === 'col_accept_id') return handleAcceptPickup(client, message, phone, sess);
   if (['col_complete_id','col_complete_material','col_complete_weight'].includes(sess.step)) {
     return handleCompletePickup(client, message, phone, sess);
@@ -411,13 +544,18 @@ async function handle(client, message, phone, sess) {
     switch (choice) {
       case 1: return viewNearbyPickups(client, message, phone, sess);
       case 2: {
+        // Accept by ID — fallback if user already knows the pickup ID
         session.set(phone, { step: 'col_accept_id' });
-        await message.reply(lang === 'pid' ? '🔢 Enter the Pickup ID you wan accept:' : '🔢 Enter the Pickup ID to accept:');
+        await message.reply(lang === 'pid'
+          ? `📥 *Accept Pickup by ID*\n\nEnter the Pickup ID:\n(e.g. PU-XXXXXX)\n\nOr type *0* to go back.`
+          : `📥 *Accept Pickup by ID*\n\nEnter the Pickup ID:\n(e.g. PU-XXXXXX)\n\nOr type *0* to go back.`);
         return;
       }
       case 3: {
         session.set(phone, { step: 'col_complete_id' });
-        await message.reply(lang === 'pid' ? '🔢 Enter the Pickup ID to complete:' : '🔢 Enter the Pickup ID to mark complete:');
+        await message.reply(lang === 'pid'
+          ? `📤 *Complete Pickup*\n\nEnter the Pickup ID to mark complete:\n(e.g. PU-XXXXXX)\n\nOr type *0* to go back.`
+          : `📤 *Complete Pickup*\n\nEnter the Pickup ID to mark complete:\n(e.g. PU-XXXXXX)\n\nOr type *0* to go back.`);
         return;
       }
       case 4: return viewMyRoute(client, message, phone, sess);

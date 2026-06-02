@@ -240,10 +240,17 @@ async function handlePickupRequest(client, message, phone, sess) {
         storage.update('users', u => u.phone === phone, update);
       }
 
-      if (assignedCollector) {
-        try {
-          await client.sendMessage(`${assignedCollector.phone}@c.us`, `🚛 *New Pickup Available*\n\nPickup ID: ${pickupId}\nType: ${pickup.wasteType}\nQuantity: ${pickup.quantityKg}kg\nLocation: ${pickup.address}\nPreferred: ${pickup.preferredDay}, ${pickup.preferredTime}\n\nReply with the pickup ID to accept.`);
-        } catch (_) {}
+      // Notify ALL registered collectors so demo works without a backend
+      const allCollectors = storage.readAll('collectors');
+      const pickupNotice =
+        `🚛 *New Pickup Request!*\n\n` +
+        `Pickup ID: *${pickupId}*\n` +
+        `♻️ ${pickup.wasteType}  |  ⚖️ ${pickup.quantityKg}kg\n` +
+        `📍 ${pickup.address}\n` +
+        `⏰ ${pickup.preferredDay}, ${pickup.preferredTime}\n\n` +
+        `Go to *Available Pickups* from your menu to accept.`;
+      for (const col of allCollectors) {
+        try { await client.sendMessage(`${col.phone}@c.us`, pickupNotice); } catch (_) {}
       }
 
       if (pickup.confirmation) {

@@ -94,25 +94,40 @@ async function handleCreateListing(client, message, phone, sess) {
   }
 }
 
-// ── VIEW ALL LISTINGS ─────────────────────────────────────────────────────────
+// ── VIEW ALL LISTINGS — numbered, interactive select ──────────────────────────
 async function viewListings(client, message, phone, sess) {
   const lang = sess.lang;
   const listings = storage.findAll('listings', l => l.status === 'available');
 
   if (listings.length === 0) {
-    await message.reply(lang === 'pid' ? '📭 No listing dey available now.' : '📭 No listings available right now.');
-    return listings;
+    await message.reply(lang === 'pid'
+      ? `📭 *No Listings Yet*\n\nNo material listing dey available right now.\n\nCollectors post materials after completing pickups. Check back soon!`
+      : `📭 *No Listings Available*\n\nNo materials listed right now.\n\nCollectors post materials after pickups. Check back soon!`);
+    return [];
   }
 
-  const list = listings.slice(0, 8).map((l, i) =>
-    `*${i + 1}. ${l.id}*\n   ${materialEmoji(l.material)} | ${l.quantity}kg | ₦${l.pricePerKg}/kg\n   💵 ₦${l.totalValue.toLocaleString()} | 📍 ${l.location}\n   👤 ${l.collectorName} ${l.collectorVerified ? '✅' : ''} | ⭐ ${l.collectorRating}/5${l.notes ? `\n   📝 ${l.notes}` : ''}`
+  const shown = listings.slice(0, 8);
+  const list = shown.map((l, i) =>
+    `*${i + 1}.* ${materialEmoji(l.material)} *${l.material}*  |  ${l.quantity}kg  |  ₦${l.pricePerKg}/kg\n` +
+    `   💵 ₦${l.totalValue.toLocaleString()}  |  📍 ${l.location}\n` +
+    `   👤 ${l.collectorName} ${l.collectorVerified ? '✅' : ''}  |  ⭐ ${l.collectorRating}/5` +
+    (l.notes ? `\n   📝 ${l.notes}` : '')
   ).join('\n\n');
 
-  await message.reply(lang === 'pid'
-    ? `🏪 *EcoSort Marketplace* (${listings.length} listings)\n\n${list}`
-    : `🏪 *EcoSort Marketplace* (${listings.length} available)\n\n${list}`);
+  await message.reply(
+    (lang === 'pid'
+      ? `🏪 *EcoSort Marketplace* (${listings.length} listing${listings.length !== 1 ? 's' : ''})\n\n`
+      : `🏪 *EcoSort Marketplace* (${listings.length} available)\n\n`) +
+    list + '\n\n' +
+    (lang === 'pid'
+      ? `Reply with a number (1–${shown.length}) to make an offer.\nOr *0* to go back.`
+      : `Reply with a number (1–${shown.length}) to select a listing and make an offer.\nOr *0* to go back.`)
+  );
 
-  return listings;
+  // Save listing IDs to session so buyer can select by number
+  session.setData(phone, 'listingsInView', shown.map(l => l.id));
+  session.set(phone, { step: 'market_browse_select' });
+  return shown;
 }
 
 // ── SEARCH LISTINGS ───────────────────────────────────────────────────────────
@@ -131,20 +146,38 @@ async function handleSearch(client, message, phone, sess) {
 
     if (results.length === 0) {
       await message.reply(lang === 'pid'
-        ? `📭 No result for "${body}". Try another material or area name.`
-        : `📭 No listings found for "${body}". Try a different material or location.`);
-    } else {
-      const list = results.slice(0, 5).map((l, i) =>
-        `*${i + 1}. ${l.id}*\n   ${materialEmoji(l.material)} | ${l.quantity}kg | ₦${l.pricePerKg}/kg\n   📍 ${l.location} | ${l.collectorName} ${l.collectorVerified ? '✅' : ''}`
-      ).join('\n\n');
-      await message.reply(lang === 'pid'
-        ? `🔍 *Results for "${body}":*\n\n${list}`
-        : `🔍 *Results for "${body}":*\n\n${list}`);
+        ? `📭 No result for "${body}".\n\nTry a different material name or area (e.g. "PET", "Aluminum", "Ikeja").`
+        : `📭 No listings found for "${body}".\n\nTry a different material or location (e.g. "PET", "Aluminum", "Ikeja").`);
+      // Return to menu on no results
+      const role = sess.role;
+      session.set(phone, { step: role === 'buyer' ? 'buyer_menu' : role === 'collector' ? 'collector_menu' : 'household_menu' });
+      await message.reply(msg(role === 'buyer' ? 'buyerMenu' : role === 'collector' ? 'collectorMenu' : 'mainMenu', lang));
+      return;
     }
 
-    const role = sess.role;
-    session.set(phone, { step: role === 'buyer' ? 'buyer_menu' : role === 'collector' ? 'collector_menu' : 'household_menu' });
-    await message.reply(msg(role === 'buyer' ? 'buyerMenu' : role === 'collector' ? 'collectorMenu' : 'mainMenu', lang));
+    const shown = results.slice(0, 5);
+    const list = shown.map((l, i) =>
+      `*${i + 1}.* ${materialEmoji(l.material)} *${l.material}*  |  ${l.quantity}kg  |  ₦${l.pricePerKg}/kg\n` +
+      `   💵 ₦${l.totalValue.toLocaleString()}  |  📍 ${l.location}\n` +
+      `   👤 ${l.collectorName} ${l.collectorVerified ? '✅' : ''}  |  ⭐ ${l.collectorRating}/5`
+    ).join('\n\n');
+
+    await message.reply(
+      `🔍 *Results for "${body}" (${shown.length}):*\n\n${list}\n\n` +
+      (lang === 'pid'
+        ? `Reply with a number (1–${shown.length}) to make an offer.\nOr *0* to go back.`
+        : `Reply with a number (1–${shown.length}) to select and make an offer.\nOr *0* to go back.`)
+    );
+
+    // For buyers: flow directly into the offer step
+    if (sess.role === 'buyer') {
+      session.setData(phone, 'listingsInView', shown.map(l => l.id));
+      session.set(phone, { step: 'market_browse_select' });
+    } else {
+      const role = sess.role;
+      session.set(phone, { step: role === 'collector' ? 'collector_menu' : 'household_menu' });
+      await message.reply(msg(role === 'collector' ? 'collectorMenu' : 'mainMenu', lang));
+    }
   }
 }
 
@@ -212,13 +245,24 @@ async function handleOffer(client, message, phone, sess) {
       await message.reply(msg('buyerMenu', lang));
       return;
     }
+    // Save listing to session and show the unified action screen (Accept Price / Make Offer)
     session.setData(phone, 'offerListingId', listing.id);
     session.setData(phone, 'offerListingCollectorPhone', listing.collectorPhone);
     session.setData(phone, 'offerOriginalPrice', listing.pricePerKg);
-    session.set(phone, { step: 'offer_price' });
-    await message.reply(lang === 'pid'
-      ? `✅ Listing found!\n\n${materialEmoji(listing.material)} | ${listing.quantity}kg\nCollector: ${listing.collectorName} ${listing.collectorVerified ? '✅' : ''}\nAsking: ₦${listing.pricePerKg}/kg\n📍 ${listing.location}${listing.notes ? `\n📝 ${listing.notes}` : ''}\n\nWetin be your offer price per kg? (₦):`
-      : `✅ Listing found!\n\n${materialEmoji(listing.material)} | ${listing.quantity}kg\nCollector: ${listing.collectorName} ${listing.collectorVerified ? '✅' : ''}\nAsking Price: ₦${listing.pricePerKg}/kg\n📍 ${listing.location}${listing.notes ? `\n📝 ${listing.notes}` : ''}\n\nYour offer price per kg? (₦):`);
+    session.set(phone, { step: 'market_listing_action' });
+    await message.reply(
+      `${materialEmoji(listing.material)} *${listing.material}*\n\n` +
+      `Quantity: *${listing.quantity}kg*\n` +
+      `Listed Price: *₦${listing.pricePerKg}/kg*\n` +
+      `Total Value: ₦${listing.totalValue.toLocaleString()}\n` +
+      `Location: 📍 ${listing.location}\n` +
+      `Collector: ${listing.collectorName} ${listing.collectorVerified ? '✅ Verified' : ''}  |  ⭐ ${listing.collectorRating}/5\n` +
+      (listing.notes ? `Notes: 📝 ${listing.notes}\n` : '') +
+      `\n` +
+      (lang === 'pid'
+        ? `Wetin you wan do?\n\n1️⃣ Accept Price (₦${listing.pricePerKg}/kg) — Buy Now\n2️⃣ Make Offer — Negotiate Price\n3️⃣ Back\n\nReply with number.`
+        : `What would you like to do?\n\n1️⃣ Accept Price (₦${listing.pricePerKg}/kg) — Purchase Now\n2️⃣ Make Offer — Negotiate a Different Price\n3️⃣ Back\n\nReply with number.`)
+    );
     return;
   }
 
@@ -246,22 +290,24 @@ async function handleOffer(client, message, phone, sess) {
     const offerPrice = parseFloat(body);
     const mat = listing ? materialEmoji(listing.material) : '';
     const qty = listing ? `${listing.quantity}kg` : '';
+    const offerNotice =
+      `💰 *New Offer Received!*\n\n` +
+      `Offer ID: *${offerId}*\n` +
+      `Listing: ${listingId}  ${mat} ${qty}\n` +
+      `From: *${buyer ? buyer.companyName : 'Buyer'}*\n` +
+      `Their Offer: *₦${offerPrice}/kg*\n` +
+      `Listed Price: ₦${sess.data.offerOriginalPrice || '?'}/kg\n\n` +
+      `To respond, type ONE of these:\n` +
+      `✅  accept ${offerId}\n` +
+      `❌  reject ${offerId}\n` +
+      `🔄  counter ${offerId} [your price]  (e.g. counter ${offerId} 180)\n\n` +
+      `Or go to Marketplace → My Offers to see all pending offers.`;
 
-    try {
-      await client.sendMessage(`${collectorPhone}@c.us`,
-        `💰 *New Offer Received!*\n\n` +
-        `Offer ID: *${offerId}*\n` +
-        `Listing: ${listingId}  ${mat} ${qty}\n` +
-        `From: *${buyer ? buyer.companyName : 'Buyer'}*\n` +
-        `Their Offer: *₦${offerPrice}/kg*\n` +
-        `Your Asking Price: ₦${sess.data.offerOriginalPrice || '?'}/kg\n\n` +
-        `To respond, type ONE of these:\n` +
-        `✅  accept ${offerId}\n` +
-        `❌  reject ${offerId}\n` +
-        `🔄  counter ${offerId} [your price]  (e.g. counter ${offerId} 180)\n\n` +
-        `Or go to Marketplace → My Offers to see all pending offers.`
-      );
-    } catch (_) {}
+    // Notify ALL collectors so demo works without a real backend
+    const allCols = storage.readAll('collectors');
+    for (const col of allCols) {
+      try { await client.sendMessage(`${col.phone}@c.us`, offerNotice); } catch (_) {}
+    }
 
     session.set(phone, { step: 'buyer_menu' });
     await message.reply(
@@ -411,37 +457,45 @@ async function startListing(client, message, phone, sess) {
     : `♻️ *Post Listing*\n\nWhat material are you listing?\n\n${matList}\n\nReply with number.`);
 }
 
-// ── COLLECTOR: VIEW INCOMING OFFERS ──────────────────────────────────────────
+// ── COLLECTOR: VIEW ALL OFFERS (demo — visible to any collector) ──────────────
 async function viewCollectorOffers(client, message, phone, sess) {
   const lang = sess.lang;
-  const offers = storage.findAll('offers', o => o.collectorPhone === phone);
+
+  // DEMO MODE: all collectors can see all pending offers so the full
+  // negotiation flow can be demonstrated without a per-collector backend.
+  const pending  = storage.findAll('offers', o => o.status === 'pending' || o.status === 'countered');
+  const myOffers = storage.findAll('offers', o => o.collectorPhone === phone && !['pending','countered'].includes(o.status));
+  const offers   = [...pending, ...myOffers].slice(0, 10);
 
   if (offers.length === 0) {
     await message.reply(lang === 'pid'
-      ? `📭 *No Offers Yet*\n\nNo buyer don make offer on your listings.\n\nPost a listing first so buyers can find your materials!`
-      : `📭 *No Offers Yet*\n\nNo buyers have made offers on your listings yet.\n\nMake sure you have active listings so buyers can find you!`);
+      ? `📭 *No Offers Yet*\n\nNo buyer don submit any offer yet.\n\nMake sure you have active listings so buyers can find your materials!`
+      : `📭 *No Offers Yet*\n\nNo buyers have submitted offers yet.\n\nMake sure you have active listings so buyers can find your materials!`);
     return;
   }
 
   const statusEmoji = { pending: '⏳', accepted: '✅', rejected: '❌', countered: '🔄' };
-  const sorted = [...offers].reverse().slice(0, 8);
 
-  const lines = sorted.map(o => {
+  const lines = offers.map(o => {
+    const listing = storage.findOne('listings', l => l.id === o.listingId);
+    const mat = listing ? `${materialEmoji(listing.material)} ${listing.material} ${listing.quantity}kg` : o.listingId;
     let line = `${statusEmoji[o.status] || '⏳'} *${o.id}*\n`;
-    line += `   From: ${o.buyerName}  |  ₦${o.offerPrice}/kg`;
-    if (o.counterPrice) line += `  →  Counter: ₦${o.counterPrice}/kg`;
-    line += `\n   Listing: ${o.listingId}  |  ${o.status.toUpperCase()}`;
+    line += `   ${mat}\n`;
+    line += `   From: ${o.buyerName}  |  Offer: *₦${o.offerPrice}/kg*`;
+    if (o.counterPrice) line += `\n   Your Counter: ₦${o.counterPrice}/kg`;
+    line += `\n   Status: ${o.status.toUpperCase()}`;
     return line;
   }).join('\n\n');
 
-  const pending = offers.filter(o => o.status === 'pending');
-  const actionNote = pending.length > 0
-    ? `\n\n⚠️ *${pending.length} offer(s) waiting for your response!*\n\nTo respond, type:\n✅  accept [OFFER-ID]\n❌  reject [OFFER-ID]\n🔄  counter [OFFER-ID] [your price]`
-    : `\n\n_All offers have been responded to._`;
+  const needsResponse = offers.filter(o => o.status === 'pending' || o.status === 'countered');
+  const actionNote = needsResponse.length > 0
+    ? `\n\n⚠️ *${needsResponse.length} offer(s) need a response:*\n\nType one of:\n✅  accept [OFFER-ID]\n❌  reject [OFFER-ID]\n🔄  counter [OFFER-ID] [price]`
+    : `\n\n_No pending offers require action._`;
 
-  await message.reply(lang === 'pid'
-    ? `💬 *Your Incoming Offers:*\n\n${lines}${actionNote}`
-    : `💬 *Your Incoming Offers:*\n\n${lines}${actionNote}`);
+  await message.reply(
+    (lang === 'pid' ? `💬 *All Incoming Offers:*\n\n` : `💬 *All Incoming Offers:*\n\n`) +
+    lines + actionNote
+  );
 }
 
 // ── MAIN HANDLE ───────────────────────────────────────────────────────────────

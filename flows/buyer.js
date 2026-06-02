@@ -73,10 +73,294 @@ async function handleRegistration(client, message, phone, sess) {
   }
 }
 
+// ── BROWSE SELECT — buyer picked a listing by number ─────────────────────────
+async function handleBrowseSelect(client, message, phone, sess) {
+  const body = message.body.trim();
+  const lang = sess.lang;
+  const listingIds = (sess.data && sess.data.listingsInView) || [];
+
+  if (body === '0') {
+    session.set(phone, { step: 'buyer_menu' });
+    await message.reply(msg('buyerMenu', lang));
+    return;
+  }
+
+  const idx = parseInt(body, 10);
+  if (isNaN(idx) || idx < 1 || idx > listingIds.length) {
+    await message.reply(lang === 'pid'
+      ? `❌ Reply with a number between 1 and ${listingIds.length}, or 0 to go back.`
+      : `❌ Please reply with a number between 1 and ${listingIds.length}, or 0 to go back.`);
+    return;
+  }
+
+  const listingId = listingIds[idx - 1];
+  const listing = storage.findOne('listings', l => l.id === listingId);
+
+  if (!listing) {
+    await message.reply(lang === 'pid'
+      ? '❌ That listing don removed. Refreshing...'
+      : '❌ That listing is no longer available. Refreshing...');
+    await viewListings(client, message, phone, sess);
+    return;
+  }
+
+  if (listing.status !== 'available') {
+    await message.reply(lang === 'pid'
+      ? '❌ That listing don sold already. Refreshing...'
+      : '❌ That listing has just been sold. Refreshing...');
+    await viewListings(client, message, phone, sess);
+    return;
+  }
+
+  // Save selected listing to session
+  session.setData(phone, 'offerListingId', listing.id);
+  session.setData(phone, 'offerListingCollectorPhone', listing.collectorPhone);
+  session.setData(phone, 'offerOriginalPrice', listing.pricePerKg);
+  session.set(phone, { step: 'market_listing_action' });
+
+  await message.reply(
+    `${materialEmoji(listing.material)} *${listing.material}*\n\n` +
+    `Quantity: *${listing.quantity}kg*\n` +
+    `Listed Price: *₦${listing.pricePerKg}/kg*\n` +
+    `Total Value: ₦${listing.totalValue.toLocaleString()}\n` +
+    `Location: 📍 ${listing.location}\n` +
+    `Collector: ${listing.collectorName} ${listing.collectorVerified ? '✅ Verified' : ''}  |  ⭐ ${listing.collectorRating}/5\n` +
+    (listing.notes ? `Notes: 📝 ${listing.notes}\n` : '') +
+    `\n` +
+    (lang === 'pid'
+      ? `Wetin you wan do?\n\n1️⃣ Accept Price (₦${listing.pricePerKg}/kg) — Buy Now\n2️⃣ Make Offer — Negotiate Price\n3️⃣ Back to Listings\n\nReply with number.`
+      : `What would you like to do?\n\n1️⃣ Accept Price (₦${listing.pricePerKg}/kg) — Purchase Now\n2️⃣ Make Offer — Negotiate a Different Price\n3️⃣ Back to Listings\n\nReply with number.`)
+  );
+}
+
+// ── LISTING ACTION — buyer chose Accept Price / Make Offer / Back ─────────────
+async function handleListingAction(client, message, phone, sess) {
+  const body = message.body.trim();
+  const lang = sess.lang;
+
+  if (!isMenuChoice(body, 3)) {
+    await message.reply(msg('invalidChoice', lang));
+    return;
+  }
+
+  const choice = getMenuChoice(body);
+
+  if (choice === 3) {
+    await viewListings(client, message, phone, sess);
+    return;
+  }
+
+  if (choice === 1) return handleAcceptPrice(client, message, phone, sess);
+
+  // choice === 2: Make Offer — ask for price
+  const listingId = sess.data && sess.data.offerListingId;
+  const listing = storage.findOne('listings', l => l.id === listingId);
+  session.set(phone, { step: 'market_offer_price_direct' });
+  await message.reply(
+    lang === 'pid'
+      ? `💬 *Make Your Offer*\n\nEnter your offer price per kg (₦):\n\n_Asking price: ₦${listing ? listing.pricePerKg : '?'}/kg_\nOr type *0* to go back.`
+      : `💬 *Make Your Offer*\n\nEnter your offer price per kg (₦):\n\n_Listed price: ₦${listing ? listing.pricePerKg : '?'}/kg_\nOr type *0* to go back.`
+  );
+}
+
+// ── ACCEPT PRICE — immediate purchase at listed price ─────────────────────────
+async function handleAcceptPrice(client, message, phone, sess) {
+  const lang = sess.lang;
+  const listingId = sess.data && sess.data.offerListingId;
+  const listing = storage.findOne('listings', l => l.id === listingId);
+  const buyer = storage.findOne('buyers', b => b.phone === phone);
+
+  if (!listing || listing.status !== 'available') {
+    await message.reply(lang === 'pid'
+      ? '❌ That listing don already sold. Refreshing...'
+      : '❌ That listing is no longer available. Refreshing...');
+    await viewListings(client, message, phone, sess);
+    return;
+  }
+
+  const offerId = generateId('OFR');
+  const txnId = generateId('TXN');
+  const agreedPrice = listing.pricePerKg;
+  const totalValue = listing.quantity * agreedPrice;
+
+  // Record offer as accepted immediately
+  storage.insert('offers', {
+    id: offerId,
+    listingId,
+    buyerPhone: phone,
+    buyerName: buyer ? buyer.companyName : 'Buyer',
+    collectorPhone: listing.collectorPhone,
+    offerPrice: agreedPrice,
+    originalPrice: agreedPrice,
+    status: 'accepted',
+    createdAt: timestamp()
+  });
+
+  // Create transaction
+  const txn = {
+    id: txnId,
+    offerId,
+    listingId,
+    buyerPhone: phone,
+    collectorPhone: listing.collectorPhone,
+    material: listing.material,
+    quantity: listing.quantity,
+    agreedPrice,
+    totalValue,
+    status: 'confirmed',
+    gps: `6.${Math.floor(Math.random() * 9999)}, 3.${Math.floor(Math.random() * 9999)}`,
+    createdAt: timestamp()
+  };
+  storage.insert('transactions', txn);
+
+  // Mark listing sold
+  storage.update('listings', l => l.id === listingId, { status: 'sold', updatedAt: timestamp() });
+
+  // Generate ESG certificate immediately
+  const { generateCertificate } = require('./certificates');
+  const cert = generateCertificate(txn, buyer ? buyer.companyName : 'Buyer');
+
+  // Notify ALL collectors so demo works without a real backend
+  const saleNotice =
+    `✅ *Material Sold — Purchase Confirmed!*\n\n` +
+    `Transaction ID: *${txnId}*\n` +
+    `Buyer: *${buyer ? buyer.companyName : 'Buyer'}*\n` +
+    `Material: ${materialEmoji(listing.material)} ${listing.material}\n` +
+    `Quantity: ${listing.quantity}kg\n` +
+    `Price: ₦${agreedPrice}/kg\n` +
+    `*Total: ₦${totalValue.toLocaleString()}*\n\n` +
+    `Contact the buyer to arrange pickup/delivery.`;
+  const allCollectors = storage.readAll('collectors');
+  for (const col of allCollectors) {
+    try { await client.sendMessage(`${col.phone}@c.us`, saleNotice); } catch (_) {}
+  }
+
+  // Confirmation screen with certificate + download option
+  await message.reply(
+    `✅ *Purchase Confirmed!*\n\n` +
+    `Transaction ID: *${txnId}*\n` +
+    `${materialEmoji(listing.material)} ${listing.material}  |  ${listing.quantity}kg\n` +
+    `Price: ₦${agreedPrice}/kg\n` +
+    `*Total: ₦${totalValue.toLocaleString()}*\n\n` +
+    `🌿 ESG Certificate: *${cert.id}*\n` +
+    `Verification: ${cert.verificationCode}\n\n` +
+    `The collector has been notified.\n\n` +
+    (lang === 'pid'
+      ? `1️⃣ Download ESG Certificate (PDF)\n2️⃣ Back to Dashboard\n\nReply with number.`
+      : `1️⃣ Download ESG Certificate (PDF)\n2️⃣ Back to Dashboard\n\nReply with number.`)
+  );
+
+  session.setData(phone, 'completedCertId', cert.id);
+  session.set(phone, { step: 'post_purchase' });
+}
+
+// ── POST PURCHASE — offer to download certificate ─────────────────────────────
+async function handlePostPurchase(client, message, phone, sess) {
+  const body = message.body.trim();
+  const lang = sess.lang;
+  const certId = sess.data && sess.data.completedCertId;
+
+  if (body === '1' && certId) {
+    const cert = storage.findOne('certificates', c => c.id === certId);
+    if (cert) {
+      await message.reply(lang === 'pid' ? '⏳ Generating PDF...' : '⏳ Generating certificate PDF...');
+      try {
+        const pdfBuffer = await generateCertificatePDF(cert);
+        await client.sendMessage(`${phone}@c.us`, {
+          document: pdfBuffer,
+          mimetype: 'application/pdf',
+          fileName: `EcoSort-ESG-Certificate-${cert.id}.pdf`,
+          caption:
+            `🌿 *ESG Certificate — ${cert.id}*\n` +
+            `Verification: ${cert.verificationCode}\n\n` +
+            `Download, save or forward this certificate for your ESG/CSR reporting.`
+        });
+      } catch (_) {
+        const { formatCertificateText } = require('./certificates');
+        await message.reply(formatCertificateText(cert));
+      }
+    }
+  }
+
+  session.set(phone, { step: 'buyer_menu' });
+  await message.reply(msg('buyerMenu', lang));
+}
+
+// ── MAKE OFFER PRICE — enter price after choosing "Make Offer" ────────────────
+async function handleDirectOfferPrice(client, message, phone, sess) {
+  const body = message.body.trim();
+  const lang = sess.lang;
+
+  if (body === '0') {
+    await viewListings(client, message, phone, sess);
+    return;
+  }
+
+  if (!isPositiveNumber(body)) {
+    await message.reply(lang === 'pid' ? '❌ Enter a valid price in ₦ (e.g. 150):' : '❌ Enter a valid price in ₦ (e.g. 150):');
+    return;
+  }
+
+  const listingId = sess.data && sess.data.offerListingId;
+  const collectorPhone = sess.data && sess.data.offerListingCollectorPhone;
+  const listing = storage.findOne('listings', l => l.id === listingId);
+  const buyer = storage.findOne('buyers', b => b.phone === phone);
+  const offerId = generateId('OFR');
+  const offerPrice = parseFloat(body);
+
+  storage.insert('offers', {
+    id: offerId,
+    listingId,
+    buyerPhone: phone,
+    buyerName: buyer ? buyer.companyName : 'Buyer',
+    collectorPhone,
+    offerPrice,
+    originalPrice: sess.data.offerOriginalPrice,
+    status: 'pending',
+    createdAt: timestamp()
+  });
+
+  const mat = listing ? materialEmoji(listing.material) : '';
+  const qty = listing ? `${listing.quantity}kg` : '';
+
+  // Notify ALL collectors so demo works without a real backend
+  const allCollectors = storage.readAll('collectors');
+  for (const col of allCollectors) {
+    try {
+      await client.sendMessage(`${col.phone}@c.us`,
+        `💰 *New Offer Received!*\n\n` +
+        `Offer ID: *${offerId}*\n` +
+        `Listing: ${listingId}  ${mat} ${qty}\n` +
+        `From: *${buyer ? buyer.companyName : 'Buyer'}*\n` +
+        `Their Offer: *₦${offerPrice}/kg*\n` +
+        `Listed Price: ₦${sess.data.offerOriginalPrice || '?'}/kg\n\n` +
+        `To respond, type ONE of these:\n` +
+        `✅  accept ${offerId}\n` +
+        `❌  reject ${offerId}\n` +
+        `🔄  counter ${offerId} [your price]  (e.g. counter ${offerId} 180)\n\n` +
+        `Or go to Marketplace → My Offers to see all pending offers.`
+      );
+    } catch (_) {}
+  }
+
+  await message.reply(
+    `✅ *Offer Sent!*\n\n` +
+    `Offer ID: *${offerId}*\n` +
+    `${mat} ${qty}  |  Your Offer: *₦${offerPrice}/kg*\n\n` +
+    (lang === 'pid'
+      ? `All collectors don receive your offer. You go hear back soon.\n\nCheck status via *My Offers* in your dashboard. 🤝`
+      : `All collectors have been notified and will respond shortly.\n\nTrack this offer via *My Offers* in your dashboard. 🤝`)
+  );
+
+  session.set(phone, { step: 'buyer_menu' });
+  await message.reply(msg('buyerMenu', lang));
+}
+
 // ── 4. MY OFFERS ──────────────────────────────────────────────────────────────
 async function viewMyOffers(client, message, phone, sess) {
   const lang = sess.lang;
-  const offers = storage.findAll('offers', o => o.buyerPhone === phone);
+  // Demo: show ALL offers so any buyer account can see the full negotiation history
+  const offers = storage.readAll('offers');
   if (offers.length === 0) {
     await message.reply(lang === 'pid'
       ? `📭 *No Offers Yet*\n\nYou never send any offer.\n\nBrowse listings and make an offer to get started!`
@@ -115,7 +399,8 @@ async function viewMyOffers(client, message, phone, sess) {
 // ── 5. MY TRANSACTIONS ────────────────────────────────────────────────────────
 async function viewTransactions(client, message, phone, sess) {
   const lang = sess.lang;
-  const txns = storage.findAll('transactions', t => t.buyerPhone === phone);
+  // Demo: show ALL transactions so any buyer account can see the full purchase history
+  const txns = storage.readAll('transactions');
   if (txns.length === 0) {
     await message.reply(lang === 'pid' ? '📭 You never do any transaction yet.' : '📭 No transactions yet.');
     session.set(phone, { step: 'buyer_menu' });
@@ -134,7 +419,8 @@ async function viewTransactions(client, message, phone, sess) {
 async function viewCertificates(client, message, phone, sess) {
   const lang = sess.lang;
   const buyer = storage.findOne('buyers', b => b.phone === phone);
-  const txns = storage.findAll('transactions', t => t.buyerPhone === phone && t.status === 'confirmed');
+  // Demo: show ALL confirmed transactions so any buyer account can access certificates
+  const txns = storage.findAll('transactions', t => t.status === 'confirmed');
 
   if (txns.length === 0) {
     await message.reply(lang === 'pid'
@@ -345,6 +631,10 @@ async function handle(client, message, phone, sess) {
     return handleRegistration(client, message, phone, sess);
   }
   if (['offer_listing_id','offer_price','offer_counter'].includes(sess.step)) return handleOffer(client, message, phone, sess);
+  if (sess.step === 'market_browse_select') return handleBrowseSelect(client, message, phone, sess);
+  if (sess.step === 'market_listing_action') return handleListingAction(client, message, phone, sess);
+  if (sess.step === 'market_offer_price_direct') return handleDirectOfferPrice(client, message, phone, sess);
+  if (sess.step === 'post_purchase') return handlePostPurchase(client, message, phone, sess);
   if (['buyer_help_menu','buyer_help_topic'].includes(sess.step)) return handleHelp(client, message, phone, sess);
   if (sess.step === 'cert_download') return handleCertDownload(client, message, phone, sess);
   if (sess.step === 'save_collector_id') {
@@ -385,9 +675,8 @@ async function handle(client, message, phone, sess) {
         return;
       }
       case 2: {
+        // viewListings now manages its own step (market_browse_select)
         await viewListings(client, message, phone, sess);
-        session.set(phone, { step: 'buyer_menu' });
-        await message.reply(msg('buyerMenu', lang));
         return;
       }
       case 3: {
