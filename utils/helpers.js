@@ -1,28 +1,11 @@
 const { v4: uuidv4 } = require('uuid');
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// STANDARD WASTE CATEGORIES (Official EcoSort Six Categories)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-const WASTE_CATEGORIES = [
-  { id: 'plastic', name: 'Plastic Waste', emoji: '♻️' },
-  { id: 'paper', name: 'Paper Waste', emoji: '📄' },
-  { id: 'metal', name: 'Metal Waste', emoji: '🔩' },
-  { id: 'glass', name: 'Glass Waste', emoji: '🍾' },
-  { id: 'organic', name: 'Organic Waste', emoji: '🌱' },
-  { id: 'ewaste', name: 'E-Waste', emoji: '⚡' }
-];
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// ID GENERATION
-// ═══════════════════════════════════════════════════════════════════════════════
-
 function generateId(prefix) {
   const short = uuidv4().split('-')[0].toUpperCase();
   return prefix ? `${prefix}-${short}` : short;
 }
 
-// Sequential IDs: ECO-HH-001, ECO-COL-001, ECO-BUY-001
+// Short sequential IDs: HH-001, COL-001, BUY-001
 function generateEcoId(role) {
   const fs = require('fs');
   const path = require('path');
@@ -40,22 +23,6 @@ function generateEcoId(role) {
   }
 }
 
-function generatePickupId() {
-  return `PU-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
-}
-
-function generateOfferId() {
-  return `OF-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
-}
-
-function generateTransactionId() {
-  return `TXN-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// DATE & TIME UTILITIES
-// ═══════════════════════════════════════════════════════════════════════════════
-
 function timestamp() {
   return new Date().toISOString();
 }
@@ -67,16 +34,6 @@ function formatDate(iso) {
   });
 }
 
-function formatTime(iso) {
-  return new Date(iso).toLocaleTimeString('en-NG', {
-    hour: '2-digit', minute: '2-digit'
-  });
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// PHONE UTILITIES
-// ═══════════════════════════════════════════════════════════════════════════════
-
 function sanitizePhone(raw) {
   return raw.replace(/\D/g, '');
 }
@@ -87,43 +44,29 @@ function normalizePhone(phone) {
   return p;
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// STATUS & ENUM UTILITIES
-// ═══════════════════════════════════════════════════════════════════════════════
-
-const PICKUP_STATUSES = {
-  pending: '🟡 Pending',
-  assigned: '🔵 Collector Assigned',
-  scheduled: '🟣 Scheduled',
-  on_the_way: '🚗 On The Way',
-  arrived: '🏠 Collector Arrived',
-  collected: '✅ Collected',
-  completed: '🎉 Completed',
-  cancelled: '❌ Cancelled'
-};
-
 function pickupStatus(status) {
-  return PICKUP_STATUSES[status] || status;
+  const map = {
+    requested:  '🟡 Pending',
+    assigned:   '🔵 Collector Assigned',
+    on_the_way: '🚗 On The Way',
+    completed:  '✅ Completed',
+    cancelled:  '❌ Cancelled'
+  };
+  return map[status] || status;
 }
 
-const OFFER_STATUSES = {
-  pending: '⏳ Pending',
-  accepted: '✅ Accepted',
-  rejected: '❌ Rejected',
-  countered: '🔄 Countered',
-  completed: '🎉 Completed'
-};
-
-function offerStatus(status) {
-  return OFFER_STATUSES[status] || status;
-}
-
-const DAYS_OF_WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-const TIME_SLOTS = ['8am - 10am', '10am - 12pm', '12pm - 2pm', '2pm - 4pm'];
-
-function wasteCategoryEmoji(categoryId) {
-  const cat = WASTE_CATEGORIES.find(c => c.id === categoryId);
-  return cat ? `${cat.emoji} ${cat.name}` : `♻️ Unknown`;
+function materialEmoji(type) {
+  const map = {
+    PET:      '♻️ PET Bottles',
+    Aluminum: '🥫 Aluminum',
+    Nylon:    '🛍️ Nylon/Plastics',
+    HDPE:     '🧴 HDPE (Jerry cans)',
+    Carton:   '📦 Cartons/Paper',
+    Mixed:    '🗂️ Mixed Recyclables',
+    Glass:    '🍾 Glass',
+    Metal:    '🔩 Metal Scraps'
+  };
+  return map[type] || `♻️ ${type}`;
 }
 
 function delay(ms) {
@@ -146,37 +89,7 @@ function updateStreak(user) {
 }
 
 module.exports = {
-  // Constants
-  WASTE_CATEGORIES,
-  PICKUP_STATUSES,
-  OFFER_STATUSES,
-  DAYS_OF_WEEK,
-  TIME_SLOTS,
-  
-  // ID Generation
-  generateId,
-  generateEcoId,
-  generatePickupId,
-  generateOfferId,
-  generateTransactionId,
-  
-  // Date/Time
-  timestamp,
-  formatDate,
-  formatTime,
-  
-  // Phone
-  sanitizePhone,
-  normalizePhone,
-  
-  // Status & Enums
-  pickupStatus,
-  offerStatus,
-  wasteCategoryEmoji,
-  
-  // Utilities
-  delay,
-  plural,
-  updateStreak
+  generateId, generateEcoId, timestamp, formatDate,
+  sanitizePhone, normalizePhone, pickupStatus,
+  materialEmoji, delay, plural, updateStreak
 };
-
