@@ -1184,7 +1184,7 @@ _Reply with 1_`
 We're here to help!
 
 📧 Email: support@ecosort.com
-📱 WhatsApp: +2348012345678
+📱 WhatsApp: +2347081280030
 🕐 Hours: 8am - 6pm (Mon-Fri)
 
 Common issues:
@@ -1203,7 +1203,7 @@ _Reply with 1_`,
 We dey for you!
 
 📧 Email: support@ecosort.com
-📱 WhatsApp: +2348012345678
+📱 WhatsApp: +2347081280030
 🕐 Hours: 8am - 6pm (Mon-Fri)
 
 Common issues:
@@ -2039,7 +2039,7 @@ _Reply with 1_`
 We're here to help!
 
 📧 Email: support@ecosort.com
-📱 WhatsApp: +2348012345678
+📱 WhatsApp: +2347081280030
 🕐 Hours: 8am - 6pm (Mon-Fri)
 
 Common issues:
@@ -2057,7 +2057,7 @@ _Reply with 1_`,
 We dey for you!
 
 📧 Email: support@ecosort.com
-📱 WhatsApp: +2348012345678
+📱 WhatsApp: +2347081280030
 🕐 Hours: 8am - 6pm (Mon-Fri)
 
 Common issues:
@@ -2271,7 +2271,7 @@ _Reply with 1_`
 We're here to help!
 
 📧 Email: support@ecosort.com
-📱 WhatsApp: +2348012345678
+📱 WhatsApp: +2347081280030
 🕐 Hours: 8am - 6pm (Mon-Fri)
 
 Common issues:
@@ -2289,7 +2289,7 @@ _Reply with 1_`,
 We dey for you!
 
 📧 Email: support@ecosort.com
-📱 WhatsApp: +2348012345678
+📱 WhatsApp: +2347081280030
 🕐 Hours: 8am - 6pm (Mon-Fri)
 
 Common issues:
