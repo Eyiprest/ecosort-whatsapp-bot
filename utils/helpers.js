@@ -46,11 +46,13 @@ function normalizePhone(phone) {
 
 function pickupStatus(status) {
   const map = {
-    requested:  '🟡 Pending',
-    assigned:   '🔵 Collector Assigned',
-    on_the_way: '🚗 On The Way',
-    completed:  '✅ Completed',
-    cancelled:  '❌ Cancelled'
+    requested:       '🟡 Pending',
+    assigned:        '🔵 Collector Assigned',
+    scheduled:       '🟣 Scheduled',
+    on_the_way:      '🚗 On The Way',
+    collected:       '✅ Collected',
+    completed:       '🏁 Completed',
+    cancelled:       '❌ Cancelled'
   };
   return map[status] || status;
 }

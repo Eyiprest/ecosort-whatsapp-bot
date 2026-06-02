@@ -402,6 +402,14 @@ async function handleIncomingMessage(message) {
       return;
     }
 
+    // Role switching
+    if (lBody === 'switch role' || lBody === 'change role') {
+      sessionMgr.set(phone, { role: null, flow: null, step: 'role_select' });
+      await message.reply('🔄 Role switch started. Please choose your new role.');
+      await message.reply(msg('roleSelect', sess.lang));
+      return;
+    }
+
     // Offer accept/reject from anywhere (collector workflow)
     if (lBody.startsWith('accept ') || lBody.startsWith('reject ')) {
       const handled = await marketplace.handleOfferResponse(client, message, phone, sess);

@@ -7,38 +7,54 @@ const { isMenuChoice, getMenuChoice } = require('../utils/validators');
 const TOPICS = {
   en: [
     {
-      title: '♻️ PET Bottle Sorting',
-      content: `*How to Sort PET Bottles*\n\n✅ Crush bottles to save space\n✅ Remove caps and labels\n✅ Keep them dry\n✅ Separate by colour if possible\n\n❌ Don't mix with dirty or oily bottles\n\n💡 PET bottles are one of the most valuable recyclables in Nigeria!`
+      title: '♻️ Plastic Waste',
+      content: `*Plastic Waste*\n\nExamples:\n• PET bottles\n• Shampoo containers\n• Drinking water jerry cans\n\nHow to prepare:\n• Rinse and dry containers\n• Remove caps and lids\n• Flatten bottles and jerry cans\n• Keep plastics separate from paper\n\nCommon mistakes:\n❌ Mixing plastic with paper or food waste\n❌ Leaving liquids inside bottles\n❌ Adding nylon bags to hard plastic\n\nEnvironmental benefits:\n✅ Saves energy and resources\n✅ Reduces road and water pollution\n✅ Makes recycling more valuable\n\nPoints earned: 5 points per KG`
     },
     {
-      title: '🌿 Top Recycling Tips',
-      content: `*Top Recycling Tips*\n\n♻️ Rinse containers before recycling\n♻️ Flatten cardboard boxes\n♻️ Never bag recyclables in black bags\n♻️ Separate paper from plastic\n♻️ Keep recyclables dry\n\n💡 Clean material = more ₦ for you!`
+      title: '📄 Paper Waste',
+      content: `*Paper Waste*\n\nExamples:\n• Cardboard boxes\n• Newspapers and magazines\n• Office paper\n\nHow to prepare:\n• Keep paper dry\n• Remove tape and plastic\n• Flatten boxes and bundle sheets\n• Keep paper away from wet waste\n\nCommon mistakes:\n❌ Recycling wet or greasy paper\n❌ Mixing paper with plastic-coated items\n❌ Bundling paper with food scraps\n\nEnvironmental benefits:\n✅ Saves trees and water\n✅ Reduces landfill volume\n✅ Supports local recycling jobs\n\nPoints earned: 4 points per KG`
     },
     {
-      title: '⚠️ Contamination Prevention',
-      content: `*Prevent Contamination*\n\nContamination happens when:\n❌ Food waste mixes with recyclables\n❌ Wet paper is stored with dry paper\n❌ Different plastic types are mixed\n\n✅ Keep separate bins for each material\n✅ Dry materials before storage\n\n💡 Contamination-free materials earn 30% more!`
+      title: '🔩 Metal Waste',
+      content: `*Metal Waste*\n\nExamples:\n• Aluminum cans\n• Steel tins\n• Scrap metal pieces\n\nHow to prepare:\n• Rinse cans and tins\n• Remove non-metal parts\n• Separate metals by type when possible\n\nCommon mistakes:\n❌ Recycling oily or dirty metal\n❌ Mixing metals with glass or plastic\n❌ Including batteries or electronics\n\nEnvironmental benefits:\n✅ Saves natural resources\n✅ Reduces mining and landfill impact\n✅ Produces strong recycled materials\n\nPoints earned: 7 points per KG`
     },
     {
-      title: '🌍 Environmental Impact',
-      content: `*Why Recycling Matters*\n\n🌊 Plastic in oceans kills 1M+ sea creatures yearly\n🏙️ Lagos generates 13,000 tonnes of waste/day\n♻️ Recycling 1 tonne of PET saves 1.5 tonnes of CO2\n💰 Nigeria recycling market worth ₦500B+\n\n🌿 Every pickup = a step toward a cleaner Nigeria!`
+      title: '🍾 Glass Waste',
+      content: `*Glass Waste*\n\nExamples:\n• Bottles\n• Jars\n• Glass containers\n\nHow to prepare:\n• Rinse and dry glass\n• Remove caps and lids\n• Wrap broken glass safely\n• Keep clear and colored glass separate\n\nCommon mistakes:\n❌ Mixing glass with metal or plastic\n❌ Including ceramics or mirrors\n❌ Packaging broken shards loosely\n\nEnvironmental benefits:\n✅ Saves sand and energy\n✅ Reduces hazards for collectors\n✅ Keeps recycling clean\n\nPoints earned: 6 points per KG`
+    },
+    {
+      title: '🌱 Organic Waste',
+      content: `*Organic Waste*\n\nExamples:\n• Fruit and vegetable peels\n• Garden trimmings\n• Food scraps\n\nHow to prepare:\n• Keep organic waste separate\n• Remove plastics and metals\n• Chop large items into smaller pieces\n• Use a compost bin or paper bag\n\nCommon mistakes:\n❌ Mixing organic waste with plastics\n❌ Putting cooked oil or chemicals in compost\n❌ Storing organics in black bags\n\nEnvironmental benefits:\n✅ Feeds soil and gardens\n✅ Reduces methane from landfills\n✅ Creates nutrient-rich compost\n\nPoints earned: 4 points per KG`
+    },
+    {
+      title: '⚡ E-Waste',
+      content: `*E-Waste*\n\nExamples:\n• Old phones and chargers\n• Batteries and cables\n• Small electronics\n\nHow to prepare:\n• Keep electronics dry and intact\n• Separate batteries and cables\n• Remove non-electronic parts\n• Do not crush or burn devices\n\nCommon mistakes:\n❌ Throwing e-waste in the regular trash\n❌ Mixing batteries with other waste\n❌ Breaking devices apart\n\nEnvironmental benefits:\n✅ Prevents toxic leaks\n✅ Saves rare metals\n✅ Supports safer recycling jobs\n\nPoints earned: 8 points per KG`
     }
   ],
   pid: [
     {
-      title: '♻️ How To Sort PET Bottle',
-      content: `*How To Sort PET Bottle*\n\n✅ Crush the bottle make e take less space\n✅ Remove cap and label\n✅ Keep am dry\n✅ Separate by colour if you fit\n\n❌ No mix with dirty or oily bottle\n\n💡 PET bottle na one of the most valuable recyclable for Nigeria!`
+      title: '♻️ Plastic Waste',
+      content: `*Plastic Waste*\n\nExamples:\n• PET bottle\n• Shampoo container\n• Water jerry can\n\nHow to prepare:\n• Wash and dry them\n• Remove cap and lid\n• Flatten bottles and jerry cans\n• Keep plastic away from paper\n\nCommon mistakes:\n❌ Mixing plastic with paper or food waste\n❌ Leaving water inside bottles\n❌ Putting nylon bag with hard plastic\n\nEnvironmental benefits:\n✅ Saves energy\n✅ Keeps road and water clean\n✅ Increases recycling value\n\nPoints earned: 5 points per KG`
     },
     {
-      title: '🌿 Top Recycling Tips',
-      content: `*Top Recycling Tips*\n\n♻️ Wash container before you recycle am\n♻️ Press down cardboard box flat\n♻️ No put recyclable inside black nylon bag\n♻️ Separate paper from plastic\n♻️ Keep am dry\n\n💡 Clean material = more ₦ for you!`
+      title: '📄 Paper Waste',
+      content: `*Paper Waste*\n\nExamples:\n• Cardboard box\n• Newspaper\n• Office paper\n\nHow to prepare:\n• Keep paper dry\n• Remove tape and plastic\n• Flatten boxes and bundle sheets\n• Keep paper away from wet waste\n\nCommon mistakes:\n❌ Recycling wet or oily paper\n❌ Mixing paper with plastic-coated items\n❌ Bundling paper with food scraps\n\nEnvironmental benefits:\n✅ Saves trees and water\n✅ Reduces landfill waste\n✅ Supports recycling business\n\nPoints earned: 4 points per KG`
     },
     {
-      title: '⚠️ Prevent Contamination',
-      content: `*How To Prevent Contamination*\n\nContamination happen when:\n❌ Food waste mix with recyclable\n❌ Wet paper dey with dry paper\n❌ Different plastic type mix together\n\n✅ Keep separate container for each material\n✅ Dry material before you store am\n\n💡 Clean material earn 30% more!`
+      title: '🔩 Metal Waste',
+      content: `*Metal Waste*\n\nExamples:\n• Aluminum can\n• Steel tin\n• Scrap metal\n\nHow to prepare:\n• Wash cans and tins\n• Remove non-metal parts\n• Separate metals when you fit\n\nCommon mistakes:\n❌ Recycling oily or dirty metal\n❌ Mixing metals with glass or plastic\n❌ Including batteries or electronics\n\nEnvironmental benefits:\n✅ Saves natural resources\n✅ Reduces mining wahala\n✅ Creates strong recycled materials\n\nPoints earned: 7 points per KG`
     },
     {
-      title: '🌍 Why Recycling Matter',
-      content: `*Why Recycling Matter*\n\n🌊 Plastic for ocean kill 1M+ sea animal every year\n🏙️ Lagos generate 13,000 tonnes of waste per day\n♻️ Recycling 1 tonne of PET save 1.5 tonnes of CO2\n💰 Nigeria recycling market worth ₦500B+\n\n🌿 Every pickup na one step towards cleaner Nigeria!`
+      title: '🍾 Glass Waste',
+      content: `*Glass Waste*\n\nExamples:\n• Bottle\n• Jar\n• Glass container\n\nHow to prepare:\n• Wash and dry glass\n• Remove cap and lid\n• Wrap broken pieces safe\n• Keep clear and coloured glass separate\n\nCommon mistakes:\n❌ Mixing glass with metal or plastic\n❌ Including ceramic or mirror\n❌ Packaging broken glass loosely\n\nEnvironmental benefits:\n✅ Saves sand and energy\n✅ Protects collectors\n✅ Keeps recycling clean\n\nPoints earned: 6 points per KG`
+    },
+    {
+      title: '🌱 Organic Waste',
+      content: `*Organic Waste*\n\nExamples:\n• Fruit peel\n• Vegetable scrap\n• Food leftovers\n\nHow to prepare:\n• Keep organic waste separate\n• Remove plastic and metal\n• Chop big items into smaller pieces\n• Use compost bin or paper bag\n\nCommon mistakes:\n❌ Mixing organic waste with plastic or metal\n❌ Putting cooked oil or chemical in compost\n❌ Storing organics in black bag\n\nEnvironmental benefits:\n✅ Feeds soil and garden\n✅ Reduces methane\n✅ Creates compost\n\nPoints earned: 4 points per KG`
+    },
+    {
+      title: '⚡ E-Waste',
+      content: `*E-Waste*\n\nExamples:\n• Old phone\n• Battery\n• Charger\n\nHow to prepare:\n• Keep electronics dry\n• Separate battery and cable\n• Remove non-electronic parts\n• Don’t crush or burn devices\n\nCommon mistakes:\n❌ Throwing e-waste away\n❌ Mixing battery with other waste\n❌ Breaking device apart\n\nEnvironmental benefits:\n✅ Prevents toxic leaks\n✅ Saves rare metals\n✅ Supports safe recycling jobs\n\nPoints earned: 8 points per KG`
     }
   ]
 };

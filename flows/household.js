@@ -5,8 +5,23 @@ const { generateEcoId, generateId, timestamp, formatDate, pickupStatus, material
 const crypto = require('crypto');
 const { isValidPhone, isValidName, isMenuChoice, getMenuChoice, isPositiveNumber } = require('../utils/validators');
 
-const WASTE_TYPES = ['PET Bottles', 'Aluminum Cans', 'Nylon/Plastic bags', 'HDPE (Jerry cans)', 'Cartons/Paper', 'Mixed Recyclables'];
-const LGAS = ['Alimosho', 'Ajeromi-Ifelodun', 'Kosofe', 'Mushin', 'Oshodi-Isolo', 'Ojo', 'Ikorodu', 'Surulere', 'Agege', 'Ifako-Ijaiye', 'Shomolu', 'Ikeja', 'Lagos Island', 'Lagos Mainland', 'Eti-Osa', 'Badagry', 'Epe', 'Ibeju-Lekki', 'Other'];
+const WASTE_TYPES = ['Plastic Waste', 'Paper Waste', 'Metal Waste', 'Glass Waste', 'Organic Waste', 'E-Waste', 'Mixed Waste'];
+const STATES = ['Lagos', 'Oyo', 'Abuja', 'Rivers', 'Kano', 'Other'];
+const LGAS = ['Alimosho', 'Ajeromi-Ifelodun', 'Kosofe', 'Mushin', 'Ikeja', 'Oshodi-Isolo'];
+const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const TIME_SLOTS = ['8am - 10am', '10am - 12pm', '12pm - 2pm', '2pm - 4pm'];
+
+function buildPickupSummary(data) {
+  return `Waste Type: ${data.pickupWaste}
+Quantity: ${data.pickupQuantity}kg
+Address: ${data.pickupAddress}
+Preferred Day: ${data.pickupDay}
+Preferred Time: ${data.pickupTime}`;
+}
+
+function getUserAddress(user) {
+  return user && user.address ? user.address : null;
+}
 
 // ── REGISTRATION ──────────────────────────────────────────────────────────────
 async function handleRegistration(client, message, phone, sess) {
@@ -17,45 +32,61 @@ async function handleRegistration(client, message, phone, sess) {
     case 'reg_name': {
       if (!isValidName(body)) { await message.reply(msg('invalidName', lang)); return; }
       session.setData(phone, 'regName', body);
-      session.set(phone, { step: 'reg_phone' });
-      await message.reply(lang === 'pid' ? `✅ Nice name! Now enter your phone number:` : `✅ Got it! Now enter your phone number:`);
+      session.set(phone, { step: 'reg_state' });
+      const stateList = STATES.map((s, i) => `${i + 1}. ${s}`).join('\n');
+      await message.reply(lang === 'pid'
+        ? `✅ Great! Which state you dey?\n\n${stateList}\n\nReply with number.`
+        : `✅ Great! Which state are you in?\n\n${stateList}\n\nReply with number.`);
       return;
     }
-    case 'reg_phone': {
-      if (!isValidPhone(body)) { await message.reply(msg('invalidPhone', lang)); return; }
-      session.setData(phone, 'regPhone', body);
+    case 'reg_state': {
+      if (!isMenuChoice(body, STATES.length)) { await message.reply(msg('invalidChoice', lang)); return; }
+      const state = STATES[getMenuChoice(body) - 1];
+      session.setData(phone, 'regState', state);
       session.set(phone, { step: 'reg_lga' });
       const lgaList = LGAS.map((l, i) => `${i + 1}. ${l}`).join('\n');
       await message.reply(lang === 'pid'
-        ? `✅ Good! Choose your LGA:\n\n${lgaList}\n\nReply with number.`
-        : `✅ Now choose your LGA:\n\n${lgaList}\n\nReply with the number.`);
+        ? `✅ Nice. Choose your LGA:\n\n${lgaList}\n\nReply with number.`
+        : `✅ Nice. Choose your LGA:\n\n${lgaList}\n\nReply with number.`);
       return;
     }
     case 'reg_lga': {
       if (!isMenuChoice(body, LGAS.length)) { await message.reply(msg('invalidChoice', lang)); return; }
       const lga = LGAS[getMenuChoice(body) - 1];
       session.setData(phone, 'regLga', lga);
-      session.set(phone, { step: 'reg_waste' });
-      const wasteList = WASTE_TYPES.map((w, i) => `${i + 1}. ${w}`).join('\n');
+      session.set(phone, { step: 'reg_address' });
       await message.reply(lang === 'pid'
-        ? `✅ Good! What kind of waste you usually generate?\n\n${wasteList}\n\nReply with number.`
-        : `✅ What type of waste do you usually generate?\n\n${wasteList}\n\nReply with number.`);
+        ? `✅ Good. Enter your full address now:`
+        : `✅ Good. Enter your full address now:`);
       return;
     }
-    case 'reg_waste': {
-      if (!isMenuChoice(body, WASTE_TYPES.length)) { await message.reply(msg('invalidChoice', lang)); return; }
-      const wasteType = WASTE_TYPES[getMenuChoice(body) - 1];
+    case 'reg_address': {
+      if (body.length < 10) { await message.reply(msg('retry', lang)); return; }
+      session.setData(phone, 'regAddress', body);
+      session.set(phone, { step: 'reg_household_size' });
+      await message.reply(lang === 'pid'
+        ? `✅ Almost done! How many people dey your household?\n\n1️⃣ 1 person\n2️⃣ 2-3 people\n3️⃣ 4-5 people\n4️⃣ 6-7 people\n5️⃣ 8+ people\n\nReply with number.`
+        : `✅ Almost done! How many people are in your household?\n\n1️⃣ 1 person\n2️⃣ 2-3 people\n3️⃣ 4-5 people\n4️⃣ 6-7 people\n5️⃣ 8+ people\n\nReply with number.`);
+      return;
+    }
+    case 'reg_household_size': {
+      if (!isMenuChoice(body, 5)) { await message.reply(msg('invalidChoice', lang)); return; }
+      const sizes = ['1 person', '2-3 people', '4-5 people', '6-7 people', '8+ people'];
+      const householdSize = sizes[getMenuChoice(body) - 1];
       const d = sess.data;
       const ecoId = generateEcoId('household');
       const user = {
         id: ecoId,
         phone,
         name: d.regName,
-        userPhone: d.regPhone,
+        state: d.regState,
         lga: d.regLga,
-        primaryWaste: wasteType,
+        address: d.regAddress,
+        householdSize,
         lang,
         points: 0,
+        monthlyPoints: 0,
+        lifetimePoints: 0,
         badges: [],
         streak: 0,
         lastActiveDate: null,
@@ -76,51 +107,113 @@ async function handleRegistration(client, message, phone, sess) {
 async function handlePickupRequest(client, message, phone, sess) {
   const body = message.body.trim();
   const lang = sess.lang;
+  const user = storage.findOne('users', u => u.phone === phone);
 
   switch (sess.step) {
     case 'pickup_waste': {
       const wasteList = WASTE_TYPES.map((w, i) => `${i + 1}. ${w}`).join('\n');
       if (!isMenuChoice(body, WASTE_TYPES.length)) {
         await message.reply(msg('invalidChoice', lang));
-        await message.reply(lang === 'pid' ? `Wetin kind waste?\n\n${wasteList}` : `Choose waste type:\n\n${wasteList}`);
+        await message.reply(lang === 'pid'
+          ? `♻️ Wetin kind waste you wan drop?\n\n${wasteList}`
+          : `♻️ Which waste type should we pick up?\n\n${wasteList}`);
         return;
       }
       session.setData(phone, 'pickupWaste', WASTE_TYPES[getMenuChoice(body) - 1]);
-      session.set(phone, { step: 'pickup_bags' });
-      await message.reply(lang === 'pid' ? `📦 How many bags you wan drop? (e.g. 3):` : `📦 How many bags/bundles? (e.g. 3):`);
+      session.set(phone, { step: 'pickup_quantity' });
+      await message.reply(msg('requestPickup.quantityPrompt', lang));
       return;
     }
-    case 'pickup_bags': {
-      if (!isPositiveNumber(body)) { await message.reply(lang === 'pid' ? '❌ Enter valid number.' : '❌ Please enter a valid number.'); return; }
-      session.setData(phone, 'pickupBags', body);
-      session.set(phone, { step: 'pickup_address' });
-      await message.reply(lang === 'pid' ? `📍 Enter your pickup address:` : `📍 Enter your pickup address or location:`);
+    case 'pickup_quantity': {
+      if (!isPositiveNumber(body)) { await message.reply(msg('errors.invalidQuantity', lang)); return; }
+      session.setData(phone, 'pickupQuantity', parseFloat(body));
+      if (user && user.address) {
+        session.set(phone, { step: 'pickup_address_choice' });
+        await message.reply(msg('requestPickup.addressConfirm', lang));
+      } else {
+        session.set(phone, { step: 'pickup_address_new' });
+        await message.reply(lang === 'pid'
+          ? `📍 Enter your pickup address now:`
+          : `📍 Enter your pickup address now:`);
+      }
       return;
     }
-    case 'pickup_address': {
-      if (body.length < 5) { await message.reply(lang === 'pid' ? '❌ Enter proper address.' : '❌ Please enter a valid address.'); return; }
+    case 'pickup_address_choice': {
+      if (!isMenuChoice(body, 2)) { await message.reply(msg('invalidChoice', lang)); return; }
+      if (getMenuChoice(body) === 1) {
+        session.setData(phone, 'pickupAddress', user.address);
+        session.set(phone, { step: 'pickup_day' });
+        const dayList = DAYS.map((d, i) => `${i + 1}. ${d}`).join('\n');
+        await message.reply(lang === 'pid'
+          ? `📅 Choose collection day:\n\n${dayList}`
+          : `📅 Choose collection day:\n\n${dayList}`);
+      } else {
+        session.set(phone, { step: 'pickup_address_new' });
+        await message.reply(lang === 'pid'
+          ? `📍 Enter your full pickup address:`
+          : `📍 Enter your full pickup address:`);
+      }
+      return;
+    }
+    case 'pickup_address_new': {
+      if (body.length < 10) { await message.reply(msg('retry', lang)); return; }
       session.setData(phone, 'pickupAddress', body);
+      session.set(phone, { step: 'pickup_day' });
+      const dayList = DAYS.map((d, i) => `${i + 1}. ${d}`).join('\n');
+      await message.reply(lang === 'pid'
+        ? `📅 Choose collection day:\n\n${dayList}`
+        : `📅 Choose collection day:\n\n${dayList}`);
+      return;
+    }
+    case 'pickup_day': {
+      if (!isMenuChoice(body, DAYS.length)) { await message.reply(msg('invalidChoice', lang)); return; }
+      session.setData(phone, 'pickupDay', DAYS[getMenuChoice(body) - 1]);
       session.set(phone, { step: 'pickup_time' });
-      await message.reply(lang === 'pid' ? `⏰ When you wan do pickup? (e.g. Tomorrow 9am, Today 4pm):` : `⏰ Preferred pickup time? (e.g. Tomorrow 9am, Today 4pm):`);
+      const timeList = TIME_SLOTS.map((t, i) => `${i + 1}. ${t}`).join('\n');
+      await message.reply(lang === 'pid'
+        ? `🕐 Choose collection time:\n\n${timeList}`
+        : `🕐 Choose collection time:\n\n${timeList}`);
       return;
     }
     case 'pickup_time': {
-      const d = sess.data;
-      const user = storage.findOne('users', u => u.phone === phone);
-      const pickupId = generateId('PKP');
+      if (!isMenuChoice(body, TIME_SLOTS.length)) { await message.reply(msg('invalidChoice', lang)); return; }
+      session.setData(phone, 'pickupTime', TIME_SLOTS[getMenuChoice(body) - 1]);
+      session.set(phone, { step: 'pickup_review' });
+      const summary = buildPickupSummary(sess.data);
+      await message.reply(msg('requestPickup.reviewRequest', lang, summary));
+      return;
+    }
+    case 'pickup_review': {
+      if (!isMenuChoice(body, 3)) { await message.reply(msg('invalidChoice', lang)); return; }
+      const choice = getMenuChoice(body);
+      if (choice === 2) {
+        session.set(phone, { step: 'pickup_waste' });
+        const wasteList = WASTE_TYPES.map((w, i) => `${i + 1}. ${w}`).join('\n');
+        await message.reply(lang === 'pid'
+          ? `♻️ Choose waste type again:\n\n${wasteList}`
+          : `♻️ Choose waste type again:\n\n${wasteList}`);
+        return;
+      }
+      if (choice === 3) {
+        session.set(phone, { step: 'household_menu' });
+        await message.reply(lang === 'pid' ? '❌ Pickup request cancelled. Type *menu* to continue.' : '❌ Pickup request cancelled. Type *menu* to continue.');
+        return;
+      }
+
+      const pickupId = generateId('PU');
       const collectors = storage.readAll('collectors');
       const assignedCollector = collectors.length > 0 ? collectors[Math.floor(Math.random() * collectors.length)] : null;
-
       const pickup = {
         id: pickupId,
         userId: user ? user.id : phone,
         userPhone: phone,
-        userName: user ? user.name : 'Unknown',
+        userName: user ? user.name : 'Household User',
         userLga: user ? user.lga : 'Unknown',
-        wasteType: d.pickupWaste,
-        bags: d.pickupBags,
-        address: d.pickupAddress,
-        preferredTime: body,
+        wasteType: sess.data.pickupWaste,
+        quantityKg: sess.data.pickupQuantity,
+        address: sess.data.pickupAddress,
+        preferredDay: sess.data.pickupDay,
+        preferredTime: sess.data.pickupTime,
         status: 'requested',
         collectorId: assignedCollector ? assignedCollector.id : null,
         collectorName: assignedCollector ? assignedCollector.name : null,
@@ -128,43 +221,36 @@ async function handlePickupRequest(client, message, phone, sess) {
         createdAt: timestamp(),
         updatedAt: timestamp()
       };
-      // Generate cryptographically secure confirmation code (2-hour TTL)
       try {
-        const code = crypto.randomBytes(6).toString('hex').toUpperCase();
+        const code = crypto.randomBytes(3).toString('hex').toUpperCase();
         const expiresAt = new Date(Date.now() + (2 * 60 * 60 * 1000)).toISOString();
         pickup.confirmation = { code, expiresAt };
       } catch (_) {}
       storage.insert('pickups', pickup);
 
       if (user) {
-        const streak = updateStreak(user);
-        storage.update('users', u => u.phone === phone, {
-          points: (user.points || 0) + 10,
+        const update = {
+          points: (user.points || 0) + 15,
+          lifetimePoints: (user.lifetimePoints || 0) + 15,
+          monthlyPoints: (user.monthlyPoints || 0) + 15,
           totalPickups: (user.totalPickups || 0) + 1,
-          streak,
           lastActiveDate: new Date().toDateString()
-        });
+        };
+        update.streak = updateStreak(user);
+        storage.update('users', u => u.phone === phone, update);
       }
 
       if (assignedCollector) {
         try {
-          await client.sendMessage(`${assignedCollector.phone}@c.us`,
-            lang === 'pid'
-              ? `🚛 *New Pickup Request!*\n\nPickup ID: ${pickupId}\nUser: ${user ? user.name : 'User'}\nWaste: ${d.pickupWaste}\nBags: ${d.pickupBags}\nAddress: ${d.pickupAddress}\nTime: ${body}\n\nType *2* from your dashboard to accept.`
-              : `🚛 *New Pickup Request!*\n\nPickup ID: ${pickupId}\nUser: ${user ? user.name : 'User'}\nWaste: ${d.pickupWaste}\nBags: ${d.pickupBags}\nAddress: ${d.pickupAddress}\nTime: ${body}\n\nType *2* from your dashboard to accept.`
-          );
+          await client.sendMessage(`${assignedCollector.phone}@c.us`, `🚛 *New Pickup Available*\n\nPickup ID: ${pickupId}\nType: ${pickup.wasteType}\nQuantity: ${pickup.quantityKg}kg\nLocation: ${pickup.address}\nPreferred: ${pickup.preferredDay}, ${pickup.preferredTime}\n\nReply with the pickup ID to accept.`);
         } catch (_) {}
       }
-      // Notify user with confirmation code + points preview
-      if (pickup.confirmation) {
-        const codeMsg = lang === 'pid'
-          ? `🔐 Your Pickup Confirmation Code: *${pickup.confirmation.code}*\nThis code expires in 2 hours.`
-          : `🔐 Your Pickup Confirmation Code: *${pickup.confirmation.code}*\nThis code expires in 2 hours.`;
-        try { await message.reply(codeMsg); } catch (_) {}
-      }
 
+      if (pickup.confirmation) {
+        await message.reply(`🔐 Confirmation code: *${pickup.confirmation.code}*\nKeep it safe for the pickup.`);
+      }
       session.set(phone, { step: 'household_menu' });
-      await message.reply(msg('pickupRequested', lang, pickupId));
+      await message.reply(msg('requestPickup.pickupSubmitted', lang, pickupId));
       return;
     }
   }
@@ -175,18 +261,117 @@ async function handleTrack(client, message, phone, sess) {
   const lang = sess.lang;
   const pickups = storage.findAll('pickups', p => p.userPhone === phone);
   if (pickups.length === 0) {
-    await message.reply(msg('noPickups', lang));
+    await message.reply(msg('trackPickups.noPickups', lang));
     session.set(phone, { step: 'household_menu' });
     await message.reply(msg('mainMenu', lang));
     return;
   }
-  const recent = pickups.slice(-3).reverse();
-  const lines = recent.map(p =>
-    `📦 *${p.id}*\n   Type: ${p.wasteType} | Bags: ${p.bags}\n   ${pickupStatus(p.status)}\n   ${p.collectorName ? `Collector: ${p.collectorName}` : 'Awaiting collector'}\n   📅 ${formatDate(p.createdAt)}`
+
+  const lines = pickups.slice(-5).reverse().map(p =>
+    `*${p.id}* | ${p.wasteType} | ${pickupStatus(p.status)} | ${p.quantityKg || p.bags || '–'}kg`
   ).join('\n\n');
-  await message.reply(lang === 'pid' ? `🚗 *Your Recent Pickups:*\n\n${lines}` : `🚗 *Your Recent Pickups:*\n\n${lines}`);
+
+  await message.reply(msg('trackPickups.pickupList', lang, lines));
+  session.set(phone, { step: 'track_select' });
+}
+
+async function handleTrackSelection(client, message, phone, sess) {
+  const body = message.body.trim();
+  const lang = sess.lang;
+
+  if (body === '1') {
+    session.set(phone, { step: 'pickup_waste' });
+    const wasteList = WASTE_TYPES.map((w, i) => `${i + 1}. ${w}`).join('\n');
+    await message.reply(lang === 'pid'
+      ? `♻️ *Request Pickup*\n\nWetin kind waste you wan drop?\n\n${wasteList}`
+      : `♻️ *Request Pickup*\n\nWhich waste type should we pick up?\n\n${wasteList}`);
+    return;
+  }
+
+  if (body === '2') {
+    session.set(phone, { step: 'household_menu' });
+    await message.reply(msg('mainMenu', lang));
+    return;
+  }
+
+  const pickup = storage.findOne('pickups', p => p.id.toUpperCase() === body.toUpperCase() && p.userPhone === phone);
+  if (!pickup) {
+    await message.reply(msg('invalidChoice', lang));
+    return handleTrack(client, message, phone, sess);
+  }
+
+  session.setData(phone, 'trackPickupId', pickup.id);
+  session.set(phone, { step: 'track_detail_choice' });
+  const details = `ID: ${pickup.id}\nStatus: ${pickupStatus(pickup.status)}\nType: ${pickup.wasteType}\nQuantity: ${pickup.quantityKg || pickup.bags || '–'}kg\nAddress: ${pickup.address}\nPreferred: ${pickup.preferredDay || pickup.preferredTime || 'Not set'}\nCollector: ${pickup.collectorName || 'Waiting'}`;
+  await message.reply(msg('trackPickups.pickupDetails', lang, details));
+}
+
+async function handleTrackDetail(client, message, phone, sess) {
+  const body = message.body.trim();
+  const lang = sess.lang;
+  const pickupId = sess.data.trackPickupId;
+  const pickup = storage.findOne('pickups', p => p.id === pickupId && p.userPhone === phone);
+
+  if (!pickup) {
+    session.set(phone, { step: 'household_menu' });
+    await message.reply(msg('mainMenu', lang));
+    return;
+  }
+
+  if (sess.step === 'track_cancel_confirm') {
+    if (!isMenuChoice(body, 2)) { await message.reply(msg('invalidChoice', lang)); return; }
+    if (getMenuChoice(body) === 1) {
+      storage.update('pickups', p => p.id === pickup.id, { status: 'cancelled', updatedAt: timestamp() });
+      session.set(phone, { step: 'household_menu' });
+      await message.reply(msg('trackPickups.cancelled', lang));
+      await message.reply(msg('mainMenu', lang));
+      return;
+    }
+    session.set(phone, { step: 'track_select' });
+    await handleTrack(client, message, phone, sess);
+    return;
+  }
+
+  if (body === '1') {
+    await message.reply(`📊 *Pickup Status*\n\n${pickupStatus(pickup.status)}\n\nType *menu* to return to your dashboard.`);
+    return;
+  }
+
+  if (body === '2') {
+    if (!['requested', 'assigned', 'scheduled'].includes(pickup.status)) {
+      await message.reply(lang === 'pid'
+        ? '❌ You no fit cancel this pickup again.'
+        : '❌ You cannot cancel this pickup at this stage.');
+      return;
+    }
+    session.set(phone, { step: 'track_cancel_confirm' });
+    await message.reply(msg('trackPickups.cancelConfirm', lang));
+    return;
+  }
+
+  if (body === '3') {
+    return handleTrack(client, message, phone, sess);
+  }
+}
+
+async function handleMyPoints(client, message, phone, sess) {
+  const lang = sess.lang;
+  const user = storage.findOne('users', u => u.phone === phone);
+  if (!user) {
+    await message.reply(msg('notRegistered', lang));
+    return;
+  }
+  const total = user.points || 0;
+  const monthly = user.monthlyPoints || 0;
+  const lifetime = user.lifetimePoints || 0;
+  await message.reply(msg('pointsRewards.myPoints', lang, total, monthly, lifetime));
   session.set(phone, { step: 'household_menu' });
-  await message.reply(msg('mainMenu', lang));
+}
+
+async function handleHelp(client, message, phone, sess) {
+  const lang = sess.lang;
+  await message.reply(msg('helpCenter.main', lang));
+  session.set(phone, { step: 'household_menu' });
 }
 
 // ── REWARDS ───────────────────────────────────────────────────────────────────
@@ -239,8 +424,8 @@ async function handleProfile(client, message, phone, sess) {
   if (!user) { await message.reply(msg('notRegistered', lang)); return; }
   const verifiedBadge = user.verified ? '✅ Verified' : '⏳ Unverified';
   await message.reply(lang === 'pid'
-    ? `👤 *Your Profile*\n\n🆔 ID: ${user.id}\n👤 Name: ${user.name}\n📞 Phone: ${user.userPhone}\n📍 LGA: ${user.lga}\n♻️ Primary Waste: ${user.primaryWaste}\n⭐ Points: ${user.points || 0}\n📦 Total Pickups: ${user.totalPickups || 0}\n🔥 Streak: ${user.streak || 0} days\n${verifiedBadge}\n📅 Joined: ${formatDate(user.registeredAt)}`
-    : `👤 *Your Profile*\n\n🆔 ID: ${user.id}\n👤 Name: ${user.name}\n📞 Phone: ${user.userPhone}\n📍 LGA: ${user.lga}\n♻️ Primary Waste: ${user.primaryWaste}\n⭐ Points: ${user.points || 0}\n📦 Total Pickups: ${user.totalPickups || 0}\n🔥 Streak: ${user.streak || 0} days\n${verifiedBadge}\n📅 Joined: ${formatDate(user.registeredAt)}`);
+    ? `👤 *Your Profile*\n\n🆔 ID: ${user.id}\n👤 Name: ${user.name}\n📞 Phone: ${user.phone}\n📍 State: ${user.state || 'N/A'}\n📍 LGA: ${user.lga || 'N/A'}\n🏠 Address: ${user.address || 'N/A'}\n👨‍👩‍👧‍👦 Household: ${user.householdSize || 'N/A'}\n⭐ Points: ${user.points || 0}\n🔥 Streak: ${user.streak || 0} days\n${verifiedBadge}\n📅 Joined: ${formatDate(user.registeredAt)}\n\nType *switch role* to update your role or *menu* to return.`
+    : `👤 *Your Profile*\n\n🆔 ID: ${user.id}\n👤 Name: ${user.name}\n📞 Phone: ${user.phone}\n📍 State: ${user.state || 'N/A'}\n📍 LGA: ${user.lga || 'N/A'}\n🏠 Address: ${user.address || 'N/A'}\n👨‍👩‍👧‍👦 Household: ${user.householdSize || 'N/A'}\n⭐ Points: ${user.points || 0}\n🔥 Streak: ${user.streak || 0} days\n${verifiedBadge}\n📅 Joined: ${formatDate(user.registeredAt)}\n\nType *switch role* to update your role or *menu* to return.`);
   session.set(phone, { step: 'household_menu' });
   await message.reply(msg('mainMenu', lang));
 }
@@ -271,13 +456,19 @@ async function handle(client, message, phone, sess) {
   }
 
   // Registration steps
-  if (['reg_name','reg_phone','reg_lga','reg_waste'].includes(sess.step)) {
+  if (['reg_name','reg_state','reg_lga','reg_address','reg_household_size'].includes(sess.step)) {
     return handleRegistration(client, message, phone, sess);
   }
 
   // Pickup steps
-  if (['pickup_waste','pickup_bags','pickup_address','pickup_time'].includes(sess.step)) {
+  if (['pickup_waste','pickup_quantity','pickup_address_choice','pickup_address_new','pickup_day','pickup_time','pickup_review'].includes(sess.step)) {
     return handlePickupRequest(client, message, phone, sess);
+  }
+
+  // Track pickup flow
+  if (['track_select','track_detail_choice','track_cancel_confirm'].includes(sess.step)) {
+    if (sess.step === 'track_select') return handleTrackSelection(client, message, phone, sess);
+    return handleTrackDetail(client, message, phone, sess);
   }
 
   // Dashboard menu
@@ -293,18 +484,18 @@ async function handle(client, message, phone, sess) {
         return;
       }
       case 2: return handleTrack(client, message, phone, sess);
-      case 3: return handleRewards(client, message, phone, sess);
-      case 4: {
+      case 3: {
         const { handle: eduHandle } = require('./education');
         return eduHandle(client, message, phone, sess, false);
       }
-      case 5: {
+      case 4: {
         const { handle: quizHandle } = require('./education');
         return quizHandle(client, message, phone, sess, true);
       }
-      case 6: return handleHistory(client, message, phone, sess);
+      case 5: return handleMyPoints(client, message, phone, sess);
+      case 6: return handleRewards(client, message, phone, sess);
       case 7: return handleProfile(client, message, phone, sess);
-      case 8: return handleChangeLang(client, message, phone, sess);
+      case 8: return handleHelp(client, message, phone, sess);
     }
   }
 

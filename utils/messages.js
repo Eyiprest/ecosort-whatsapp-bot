@@ -403,27 +403,13 @@ _Reply with number_`
 Pickup ID: *${pickupId}*
 Status: 🟡 Pending
 
-We're finding a collector for you. You'll get updates here.
+We've saved your request and will update you as soon as a collector is assigned.
 
-Next Step: A collector will be assigned within 2 hours.
-
-_Reply: 1 to go back to menu_`,
-    pid: `✅ *Pickup Request Don Submit!*
-
-Pickup ID: *${pickupId}*
-Status: 🟡 Pending
-
-We dey look for collector for you. We go update you here.
-
-Next Step: Collector go assigned within 2 hours.
-
-_Reply: 1 to go back to menu_`
+Next Step: Wait for updates here or type *menu* to return to your dashboard.
+`,
+    pid: `✅ *Pickup Request Don Submit!* \n\nPickup ID: *${pickupId}*\nStatus: 🟡 Pending\n\nWe don save your request. We go update you once collector don accept am.\n\nNext Step: Wait for update here or type *menu* to return to your dashboard.\n`
   })
 };
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TRACK PICKUPS
-// ═══════════════════════════════════════════════════════════════════════════════
 
 const trackPickups = {
   noPickups: {
@@ -431,16 +417,16 @@ const trackPickups = {
 
 You don't have any pending pickups right now.
 
-Would you like to:
+What would you like to do?
 1️⃣ Request a new pickup
 2️⃣ Return to menu
 
 _Reply with 1 or 2_`,
     pid: `📭 *No Active Pickups*
 
-You no get any pending pickup now.
+You no get pending pickup now.
 
-You wan:
+Wetin you want do?
 1️⃣ Request new pickup
 2️⃣ Return to menu
 
@@ -452,12 +438,12 @@ _Reply with 1 or 2_`
 
 ${pickups}
 
-Reply with a pickup ID to see details.`,
+Reply with a pickup ID to see details or type *menu* to return.`,
     pid: `📍 *Your Active Pickups*
 
 ${pickups}
 
-Reply with a pickup ID to see details.`
+Reply with a pickup ID to see details or type *menu* to return.`
   }),
 
   pickupDetails: (details) => ({
@@ -465,8 +451,8 @@ Reply with a pickup ID to see details.`
 
 ${details}
 
-1️⃣ 👁️ View Full Status
-2️⃣ ❌ Cancel Pickup (if pending)
+1️⃣ 🔎 View Status
+2️⃣ ❌ Cancel Pickup
 3️⃣ ⬅️ Back
 
 _Reply with number_`,
@@ -474,12 +460,44 @@ _Reply with number_`,
 
 ${details}
 
-1️⃣ 👁️ View Full Status
-2️⃣ ❌ Cancel Pickup (if pending)
+1️⃣ 🔎 View Status
+2️⃣ ❌ Cancel Pickup
 3️⃣ ⬅️ Back
 
 _Reply with number_`
-  })
+  }),
+
+  cancelConfirm: {
+    en: `⚠️ *Cancel Pickup*
+
+Are you sure you want to cancel this pickup?
+
+1️⃣ Yes, cancel it
+2️⃣ No, keep it
+
+_Reply with number_`,
+    pid: `⚠️ *Cancel Pickup*
+
+You sure say you wan cancel this pickup?
+
+1️⃣ Yes, cancel am
+2️⃣ No, make e continue
+
+_Reply with number_`
+  },
+
+  cancelled: {
+    en: `✅ *Pickup Cancelled*
+
+The pickup request has been cancelled.
+
+Type *menu* to return to your dashboard.`,
+    pid: `✅ *Pickup Cancelled*
+
+The pickup request don cancel.
+
+Type *menu* to return to your dashboard.`
+  }
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -490,7 +508,7 @@ const learnRecycling = {
   categorySelect: {
     en: `📚 *Learn Recycling - Pick a Category*
 
-Choose a waste type to learn about:
+Choose a waste category to learn about:
 
 1️⃣ ♻️ Plastic Waste
 2️⃣ 📄 Paper Waste
@@ -502,7 +520,7 @@ Choose a waste type to learn about:
 _Reply with number_`,
     pid: `📚 *Learn Recycling - Pick a Category*
 
-Choose waste type to learn about:
+Choose waste category to learn about:
 
 1️⃣ ♻️ Plastic Waste
 2️⃣ 📄 Paper Waste
@@ -517,99 +535,293 @@ _Reply with number_`
   plasticWaste: {
     en: `♻️ *Plastic Waste*
 
-*Examples:* Water bottles, bags, containers, toys
+*Examples:* PET bottles, jerry cans, containers, buckets
 
 *How to Prepare:*
-• Rinse bottles & containers
-• Remove caps & lids separately
-• Flatten bottles to save space
-• Keep dry
+• Rinse and dry containers
+• Remove caps and lids
+• Flatten bottles and jerry cans
+• Keep plastics separate from paper
 
 *Common Mistakes:*
-❌ Don't include mixed plastic & paper
-❌ Don't leave liquid inside
-❌ Don't include plastic bags with food
+❌ Don’t mix plastics with food waste or dirty paper
+❌ Don’t leave liquids inside bottles
+❌ Don’t include nylon bags or films with hard plastics
 
-*Environmental Impact:*
-✅ Prevents ocean pollution
-✅ Reduces landfill waste
-✅ Can be recycled into new products
+*Environmental Benefits:*
+✅ Keeps streets and waterways clean
+✅ Saves energy when recycled
+✅ Turns waste into value for your home
 
-*Earn: 5 points per KG*
+*Points Earned:* 5 points per KG
 
-_Reply: 1 to continue learning_`,
+_Reply with 1 to return to categories_`,
     pid: `♻️ *Plastic Waste*
 
-*Examples:* Bottles, bags, containers, toys
+*Examples:* PET bottle, jerry can, container, bucket
 
 *How to Prepare:*
-• Rinse bottles & containers
-• Remove caps & lids separate
-• Flatten bottles to save space
-• Keep dry
+• Wash and dry am
+• Remove cap and lid
+• Flatten bottle and jerry can
+• Keep plastic separate from paper
 
 *Common Mistakes:*
-❌ No mix plastic & paper
-❌ No leave liquid inside
-❌ No plastic bags with food
+❌ No mix plastic with food waste or dirty paper
+❌ No leave water inside bottle
+❌ No put nylon bag with hard plastic
 
-*Environmental Impact:*
-✅ Stop ocean pollution
-✅ Reduce landfill waste
-✅ Can make new products
+*Environmental Benefits:*
+✅ Keep road and water clean
+✅ Save energy when recycle
+✅ Turn waste to value for your house
 
-*Earn: 5 points per KG*
+*Points Earned:* 5 points per KG
 
-_Reply: 1 to continue learning_`
+_Reply with 1 to return to categories_`
   },
 
   paperWaste: {
     en: `📄 *Paper Waste*
 
-*Examples:* Newspapers, cardboard, magazines, books
+*Examples:* Cardboard, newspapers, notebooks, office paper
 
 *How to Prepare:*
-• Keep dry and clean
-• Remove plastic/tape from cardboard
-• Flatten boxes
-• Bundle paper together
+• Keep paper dry and clean
+• Remove tape and plastic from boxes
+• Flatten cartons and bundle paper
+• Keep paper away from wet waste
 
 *Common Mistakes:*
-❌ Don't include wet/soaked paper
-❌ Don't mix with plastic coating
-❌ Don't include greasy papers
+❌ Don’t include soaked or greasy paper
+❌ Don’t mix with plastic-coated items
+❌ Don’t bundle paper with food waste
 
-*Environmental Impact:*
-✅ Saves trees
-✅ Reduces deforestation
-✅ Creates jobs in recycling
+*Environmental Benefits:*
+✅ Saves trees and water
+✅ Reduces landfill pressure
+✅ Supports local recycling businesses
 
-*Earn: 3 points per KG*
+*Points Earned:* 4 points per KG
 
-_Reply: 1 to continue learning_`,
+_Reply with 1 to return to categories_`,
     pid: `📄 *Paper Waste*
 
-*Examples:* Newspapers, cardboard, magazines, books
+*Examples:* Cardboard, newspaper, notebook, office paper
 
 *How to Prepare:*
-• Keep dry and clean
-• Remove plastic/tape from cardboard
-• Flatten boxes
-• Bundle paper together
+• Keep paper dry and clean
+• Remove tape and plastic from box
+• Flatten carton and bundle paper
+• Keep paper away from wet waste
 
 *Common Mistakes:*
-❌ No wet/soaked paper
-❌ No mix with plastic coating
-❌ No greasy papers
+❌ No soak or greasy paper
+❌ No mix with plastic-coated thing
+❌ No put paper with food waste
 
-*Environmental Impact:*
-✅ Save trees
-✅ Reduce deforestation
-✅ Create jobs in recycling
+*Environmental Benefits:*
+✅ Save tree and water
+✅ Reduce landfill wahala
+✅ Support local recycling business
 
-*Earn: 3 points per KG*
+*Points Earned:* 4 points per KG
 
-_Reply: 1 to continue learning_`
+_Reply with 1 to return to categories_`
+  },
+
+  metalWaste: {
+    en: `🔩 *Metal Waste*
+
+*Examples:* Aluminum cans, steel tins, wires, scrap metal
+
+*How to Prepare:*
+• Rinse cans and tins
+• Remove non-metal parts
+• Keep metals separate by type when possible
+
+*Common Mistakes:*
+❌ Don’t recycle oily or dirty metal
+❌ Don’t mix metals with plastic or glass
+❌ Don’t include batteries or electronics
+
+*Environmental Benefits:*
+✅ Saves natural resources
+✅ Reduces mining and landfill waste
+✅ Creates stronger recycled products
+
+*Points Earned:* 7 points per KG
+
+_Reply with 1 to return to categories_`,
+    pid: `🔩 *Metal Waste*
+
+*Examples:* Aluminum can, steel tin, wire, scrap metal
+
+*How to Prepare:*
+• Wash can and tin
+• Remove non-metal part
+• Keep metal separate by type if you fit
+
+*Common Mistakes:*
+❌ No recycle oily or dirty metal
+❌ No mix metal with plastic or glass
+❌ No put battery or electronic inside
+
+*Environmental Benefits:*
+✅ Save natural resource
+✅ Reduce mining and landfill waste
+✅ Make stronger recycled products
+
+*Points Earned:* 7 points per KG
+
+_Reply with 1 to return to categories_`
+  },
+
+  glassWaste: {
+    en: `🍾 *Glass Waste*
+
+*Examples:* Bottles, jars, glass containers, broken glass
+
+*How to Prepare:*
+• Rinse and dry glass containers
+• Remove caps and lids
+• Keep broken glass separate and wrapped
+• Sort clear and colored glass when possible
+
+*Common Mistakes:*
+❌ Don’t mix glass with metal or plastic
+❌ Don’t include ceramics or mirrors
+❌ Don’t package broken shards loosely
+
+*Environmental Benefits:*
+✅ Saves sand and energy
+✅ Reduces injuries at recycling centers
+✅ Keeps neighborhoods safer
+
+*Points Earned:* 6 points per KG
+
+_Reply with 1 to return to categories_`,
+    pid: `🍾 *Glass Waste*
+
+*Examples:* Bottle, jar, glass container, broken glass
+
+*How to Prepare:*
+• Wash and dry glass container
+• Remove cap and lid
+• Keep broken glass separate and wrap am
+• Sort clear and coloured glass if you fit
+
+*Common Mistakes:*
+❌ No mix glass with metal or plastic
+❌ No include ceramic or mirror
+❌ No package broken glass loosely
+
+*Environmental Benefits:*
+✅ Save sand and energy
+✅ Reduce injury for recycling center
+✅ Keep area safer
+
+*Points Earned:* 6 points per KG
+
+_Reply with 1 to return to categories_`
+  },
+
+  organicWaste: {
+    en: `🌱 *Organic Waste*
+
+*Examples:* Fruit peels, vegetable scraps, food leftovers, garden clippings
+
+*How to Prepare:*
+• Keep organic waste separate
+• Remove plastics and metals
+• Use a compost bin or paper bag
+• Chop large items for faster breakdown
+
+*Common Mistakes:*
+❌ Don’t mix organics with plastics or metal
+❌ Don’t put cooked oil or chemicals in compost
+❌ Don’t leave organic waste in black bags
+
+*Environmental Benefits:*
+✅ Feeds soil and gardens
+✅ Reduces methane from landfills
+✅ Makes nutrient-rich compost
+
+*Points Earned:* 4 points per KG
+
+_Reply with 1 to return to categories_`,
+    pid: `🌱 *Organic Waste*
+
+*Examples:* Fruit peel, vegetable scrap, food leftovers, garden clippings
+
+*How to Prepare:*
+• Keep organic waste separate
+• Remove plastic and metal
+• Use compost bin or paper bag
+• Chop big thing for faster breakdown
+
+*Common Mistakes:*
+❌ No mix organic with plastic or metal
+❌ No put cooked oil or chemical for compost
+❌ No leave organic waste for long for black bag
+
+*Environmental Benefits:*
+✅ Feed soil and garden
+✅ Reduce methane for landfill
+✅ Make rich compost
+
+*Points Earned:* 4 points per KG
+
+_Reply with 1 to return to categories_`
+  },
+
+  eWaste: {
+    en: `⚡ *E-Waste*
+
+*Examples:* Old phones, batteries, cables, chargers, electronics
+
+*How to Prepare:*
+• Keep electronics dry and safe
+• Separate batteries and chargers
+• Remove non-electronic parts
+• Do not break devices open
+
+*Common Mistakes:*
+❌ Don’t throw e-waste in the regular trash
+❌ Don’t mix batteries with other waste
+❌ Don’t crush or burn electronics
+
+*Environmental Benefits:*
+✅ Prevents toxic chemicals from leaking
+✅ Saves metals and rare materials
+✅ Supports safer recycling jobs
+
+*Points Earned:* 8 points per KG
+
+_Reply with 1 to return to categories_`,
+    pid: `⚡ *E-Waste*
+
+*Examples:* Old phone, battery, cable, charger, electronics
+
+*How to Prepare:*
+• Keep electronics dry and safe
+• Separate battery and charger
+• Remove non-electronic part
+• No break device open
+
+*Common Mistakes:*
+❌ No throw e-waste for regular trash
+❌ No mix battery with other waste
+❌ No crush or burn electronics
+
+*Environmental Benefits:*
+✅ Prevent toxic chemical leak
+✅ Save metal and rare materials
+✅ Support safe recycling jobs
+
+*Points Earned:* 8 points per KG
+
+_Reply with 1 to return to categories_`
   }
 };
 
@@ -700,13 +912,13 @@ const pointsRewards = {
 
 Total Points: *${totalPoints}*
 Monthly Points: *${monthlyPoints}*
-Lifetime Earned: *${lifetime}*
+Lifetime Points: *${lifetime}*
 
 📈 Ways to Earn:
 • Request pickups: 10 points
 • Complete pickups: 20 points
 • Quiz completion: 50 points
-• Refer a friend: 100 points
+• Community actions: 20 points
 
 1️⃣ 🎁 View Rewards
 2️⃣ 📊 Leaderboard
@@ -717,13 +929,13 @@ _Reply with number_`,
 
 Total Points: *${totalPoints}*
 Monthly Points: *${monthlyPoints}*
-Lifetime Earned: *${lifetime}*
+Lifetime Points: *${lifetime}*
 
 📈 Ways to Earn:
 • Request pickup: 10 points
 • Complete pickup: 20 points
 • Quiz completion: 50 points
-• Refer friend: 100 points
+• Community actions: 20 points
 
 1️⃣ 🎁 View Rewards
 2️⃣ 📊 Leaderboard
@@ -732,7 +944,7 @@ Lifetime Earned: *${lifetime}*
 _Reply with number_`
   }),
 
-  availableRewards: {
+  availableRewards: (currentPoints) => ({
     en: `🎁 *Available Rewards*
 
 500 points = 📱 ₦500 Airtime
@@ -740,9 +952,9 @@ _Reply with number_`
 2500 points = 🛍️ Shopping Voucher
 5000 points = 💳 Premium Membership
 
-You have: 0 points
+You have: *${currentPoints}* points
 
-Which reward interests you?
+Which reward would you like to redeem?
 1️⃣ 500pt Airtime
 2️⃣ 1000pt Data
 3️⃣ 2500pt Voucher
@@ -756,13 +968,42 @@ _Reply with number_`,
 2500 points = 🛍️ Shopping Voucher
 5000 points = 💳 Premium Membership
 
-You get: 0 points
+You get: *${currentPoints}* points
 
 Wetin reward you want?
 1️⃣ 500pt Airtime
 2️⃣ 1000pt Data
 3️⃣ 2500pt Voucher
 4️⃣ ⬅️ Back
+
+_Reply with number_`
+  })
+};
+
+const helpCenter = {
+  main: {
+    en: `❓ *EcoSort Help Center*
+
+How can we help?
+
+1️⃣ How pickups work
+2️⃣ How points work
+3️⃣ How rewards work
+4️⃣ How selling works
+5️⃣ Contact support
+6️⃣ ⬅️ Back to menu
+
+_Reply with number_`,
+    pid: `❓ *EcoSort Help Center*
+
+How I fit help you?
+
+1️⃣ How pickups work
+2️⃣ How points work
+3️⃣ How rewards work
+4️⃣ How selling works
+5️⃣ Contact support
+6️⃣ ⬅️ Back to menu
 
 _Reply with number_`
   }
@@ -772,6 +1013,58 @@ _Reply with number_`
 // COLLECTOR FLOWS
 // ═══════════════════════════════════════════════════════════════════════════════
 
+const rewards = {
+  list: {
+    en: `🎁 *Available Rewards*
+
+500 points = 📱 ₦500 Airtime
+1000 points = 📶 1GB Data Bundle
+2500 points = 🛍️ ₦2,500 Shopping Voucher
+5000 points = 💳 Premium Membership
+
+Select a reward to redeem:
+1️⃣ 500pt Airtime
+2️⃣ 1000pt Data
+3️⃣ 2500pt Voucher
+4️⃣ 5000pt Premium
+5️⃣ ⬅️ Back
+
+_Reply with number_`,
+    pid: `🎁 *Available Rewards*
+
+500 points = 📱 ₦500 Airtime
+1000 points = 📶 1GB Data Bundle
+2500 points = 🛍️ ₦2,500 Shopping Voucher
+5000 points = 💳 Premium Membership
+
+Choose reward wey you want redeem:
+1️⃣ 500pt Airtime
+2️⃣ 1000pt Data
+3️⃣ 2500pt Voucher
+4️⃣ 5000pt Premium
+5️⃣ ⬅️ Back
+
+_Reply with number_`
+  },
+
+  redeemed: {
+    en: `✅ *Reward Redemption Requested!*
+
+Your reward request has been received.
+
+We will review and process it within 24 hours.
+
+Type *menu* to return to your dashboard.`,
+    pid: `✅ *Reward Redemption Requested!*
+
+We don receive your reward request.
+
+We go process am within 24 hours.
+
+Type *menu* to return to your dashboard.`
+  }
+};
+
 const collectorMenu = {
   main: {
     en: `🚛 *Collector Dashboard*
@@ -779,27 +1072,29 @@ const collectorMenu = {
 What would you like to do?
 
 1️⃣ 📬 Available Pickups
-2️⃣ 🎯 My Assigned Pickups
-3️⃣ 📦 My Inventory
-4️⃣ 🏪 Marketplace
-5️⃣ 💰 My Earnings
-6️⃣ 👤 My Profile
-7️⃣ ❓ Help
+2️⃣ ✅ Accept Pickup
+3️⃣ ✅ Complete Pickup
+4️⃣ 🗺️ My Route
+5️⃣ 📦 My Inventory
+6️⃣ 🏪 Marketplace
+7️⃣ 💰 My Earnings
+8️⃣ 👤 My Profile
 
-_Reply with number (1-7)_`,
+_Reply with number (1-8)_`,
     pid: `🚛 *Collector Dashboard*
 
 Wetin you wan do?
 
 1️⃣ 📬 Available Pickups
-2️⃣ 🎯 My Assigned Pickups
-3️⃣ 📦 My Inventory
-4️⃣ 🏪 Marketplace
-5️⃣ 💰 My Earnings
-6️⃣ 👤 My Profile
-7️⃣ ❓ Help
+2️⃣ ✅ Accept Pickup
+3️⃣ ✅ Complete Pickup
+4️⃣ 🗺️ My Route
+5️⃣ 📦 My Inventory
+6️⃣ 🏪 Marketplace
+7️⃣ 💰 My Earnings
+8️⃣ 👤 My Profile
 
-_Reply with number (1-7)_`
+_Reply with number (1-8)_`
   },
 
   availablePickups: (count) => ({
@@ -853,23 +1148,25 @@ What would you like to do?
 3️⃣ 💬 Make an Offer
 4️⃣ 📦 My Orders
 5️⃣ 📜 ESG Certificates
-6️⃣ 👤 My Profile
-7️⃣ ❓ Help
+6️⃣ ⭐ Saved Collectors
+7️⃣ 👤 My Profile
+8️⃣ ❓ Help
 
-_Reply with number (1-7)_`,
+_Reply with number (1-8)_`,
     pid: `🏭 *Buyer Dashboard*
 
 Wetin you wan do?
 
 1️⃣ 🔍 Search Materials
 2️⃣ 📋 Browse All Listings
-3️⃣ 💬 Make Offer
+3️⃣ 💬 Make an Offer
 4️⃣ 📦 My Orders
 5️⃣ 📜 ESG Certificates
-6️⃣ 👤 My Profile
-7️⃣ ❓ Help
+6️⃣ ⭐ Saved Collectors
+7️⃣ 👤 My Profile
+8️⃣ ❓ Help
 
-_Reply with number (1-7)_`
+_Reply with number (1-8)_`
   },
 
   browseMaterials: {
@@ -972,11 +1269,57 @@ const confirmation = {
 // UTILITY FUNCTION TO GET LOCALIZED MESSAGE
 // ═══════════════════════════════════════════════════════════════════════════════
 
+const welcome = onboarding.welcome;
+const roleSelect = onboarding.roleSelect;
+const mainMenu = householdMenu.main;
+const collectorMenuAlias = collectorMenu.main;
+const buyerMenuAlias = buyerMenu.main;
+const registered = householdRegistration.registrationComplete;
+const langChanged = {
+  en: `✅ Language switched to English.`,
+  pid: `✅ Language switched to Pidgin.`
+};
+
+const allScreens = {
+  onboarding,
+  welcome,
+  roleSelect,
+  householdRegistration,
+  householdMenu,
+  mainMenu,
+  requestPickup,
+  trackPickups,
+  learnRecycling,
+  quiz,
+  pointsRewards,
+  rewards,
+  helpCenter,
+  collectorMenu: collectorMenuAlias,
+  buyerMenu: buyerMenuAlias,
+  errors,
+  confirmation,
+  registered,
+  langChanged
+};
+
 function screen(obj, lang, ...args) {
   const l = lang === 'pid' ? 'pid' : 'en';
+  if (typeof obj === 'function') {
+    obj = obj(...args);
+  }
   if (!obj || !obj[l]) return `[Missing screen]`;
   const content = obj[l];
   return typeof content === 'function' ? content(...args) : content;
+}
+
+function msg(path, lang, ...args) {
+  const keys = String(path).split('.');
+  let obj = allScreens;
+  for (const key of keys) {
+    if (!obj) return `[Missing screen ${path}]`;
+    obj = obj[key];
+  }
+  return screen(obj, lang, ...args);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1003,10 +1346,13 @@ module.exports = {
   learnRecycling,
   quiz,
   pointsRewards,
+  rewards,
+  helpCenter,
   collectorMenu,
   buyerMenu,
   errors,
   confirmation,
+  msg,
   screen,
   addNavigation
 };
