@@ -12,7 +12,13 @@ let currentQR = null;
 const sessionMgr = require('./utils/session');
 const storage = require('./utils/storage');
 const { msg } = require('./utils/messages');
+const msgLoader = require('./utils/msgLoader');
 const { normalizePhone } = require('./utils/helpers');
+
+/* Load all bot messages from Supabase on startup (so dashboard edits work) */
+msgLoader.init().then(() => {
+  console.log(`[Bot] Message cache loaded: ${msgLoader.cacheSize()} messages from Supabase`);
+});
 
 const onboarding = require('./flows/onboarding');
 const household = require('./flows/household');

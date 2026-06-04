@@ -2375,6 +2375,24 @@ function screen(obj, lang, ...args) {
 }
 
 function msg(path, lang, ...args) {
+  /* ── Try Supabase cache first (dashboard-editable messages) ── */
+  try {
+    const loader = require('./msgLoader');
+    /* Build the key: last segment of path (e.g. 'welcome', 'hh_complete') */
+    const msgKey = String(path).split('.').pop();
+    /* Build vars from first arg if it's an object, or the first string arg */
+    let vars = {};
+    if (args.length > 0 && typeof args[0] === 'object' && args[0] !== null) {
+      vars = args[0];
+    } else if (args.length > 0) {
+      /* Some callers pass a single string arg (like ecoId) — store as generic */
+      vars = { ecoId: args[0], pickupId: args[0], score: args[0] };
+    }
+    const fromSupabase = loader.getMsg(msgKey, lang, vars);
+    if (fromSupabase) return fromSupabase;
+  } catch (_) { /* msgLoader not ready yet — fall through to hardcoded */ }
+
+  /* ── Fall back to hardcoded messages.js ── */
   const keys = String(path).split('.');
   let obj = allScreens;
   for (const key of keys) {
