@@ -23,7 +23,7 @@ Turn waste into value while keeping Nigeria clean.
 Choose your language:
 
 1️⃣ English
-2️⃣ Pidgin English
+2️⃣ Pidgin 
 
 _Reply with 1 or 2_`,
     pid: `♻️ *Welcome to EcoSort!*
@@ -33,7 +33,7 @@ Turn waste into value while keeping Nigeria clean.
 Choose your language:
 
 1️⃣ English
-2️⃣ Pidgin English
+2️⃣ Pidgin 
 
 _Reply with 1 or 2_`
   },
@@ -43,18 +43,18 @@ _Reply with 1 or 2_`
 
 What would you like to do?
 
-1️⃣ 🏠 Household — Request pickups & earn rewards
-2️⃣ 🚛 Collector — Collect waste & sell materials
-3️⃣ 🏭 Buyer — Source recycled materials
+1️⃣  Household — Request pickups & earn rewards
+2️⃣  Collector — Collect waste & sell materials
+3️⃣  Buyer — Source recycled materials
 
 _Reply with 1, 2 or 3_`,
     pid: `👋 *Choose Your Role*
 
 Wetin you wan do?
 
-1️⃣ 🏠 Household — Request pickup & earn reward
-2️⃣ 🚛 Collector — Collect waste & sell materials
-3️⃣ 🏭 Buyer — Buy recycled materials
+1️⃣  Household — Request pickup & earn reward
+2️⃣  Collector — Collect waste & sell materials
+3️⃣  Buyer — Buy recycled materials
 
 _Reply with 1, 2 or 3_`
   }

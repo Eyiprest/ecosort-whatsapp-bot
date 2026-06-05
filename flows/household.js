@@ -6,17 +6,31 @@ const crypto = require('crypto');
 const { isValidPhone, isValidName, isMenuChoice, getMenuChoice, isPositiveNumber } = require('../utils/validators');
 
 const WASTE_TYPES = ['Plastic Waste', 'Paper Waste', 'Metal Waste', 'Glass Waste', 'Organic Waste', 'E-Waste', 'Mixed Waste'];
-const STATES = ['Lagos', 'Oyo', 'Abuja', 'Rivers', 'Kano', 'Other'];
-const LGAS = ['Alimosho', 'Ajeromi-Ifelodun', 'Kosofe', 'Mushin', 'Ikeja', 'Oshodi-Isolo'];
-const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-const TIME_SLOTS = ['8am - 10am', '10am - 12pm', '12pm - 2pm', '2pm - 4pm'];
+// LGAs currently active on EcoSort (matches mobile app)
+const ECOSORT_LGAS = ['Agege', 'Alimosho', 'Bariga', 'Ikeja', 'Lagos Island', 'Mushin / Yaba', 'Surulere'];
+
+// All known Lagos LGAs and major areas — used to validate user-typed entries
+const ALL_LAGOS_AREAS = [
+  'agege', 'ajeromi', 'alimosho', 'amuwo', 'apapa', 'badagry', 'epe',
+  'eti-osa', 'eti osa', 'ibeju', 'lekki', 'ifako', 'ijaiye', 'ikeja',
+  'ikorodu', 'kosofe', 'lagos island', 'lagos mainland', 'lagos', 'mushin',
+  'ojo', 'oshodi', 'isolo', 'shomolu', 'somolu', 'surulere', 'bariga', 'yaba',
+  'victoria island', 'ajah', 'festac', 'gbagada', 'ketu', 'ojota', 'ojodu',
+  'berger', 'magodo', 'maryland', 'ikoyi', 'onikan', 'ojokoro', 'onigbongbo',
+  'iganmu', 'orile', 'coker', 'ipaja', 'ayobo', 'egbe', 'idimu', 'imota',
+  'ikosi', 'isheri', 'agboyi', 'mile 2', 'mile 12', 'ifelodun', 'ijede',
+  'igbogbo', 'ogijo', 'ibeju', 'iganmu', 'apapa-iganmu'
+];
+
+function isValidLagosArea(input) {
+  const lower = input.toLowerCase().trim();
+  return ALL_LAGOS_AREAS.some(area => lower.includes(area));
+}
 
 function buildPickupSummary(data) {
   return `Waste Type: ${data.pickupWaste}
 Quantity: ${data.pickupQuantity}kg
-Address: ${data.pickupAddress}
-Preferred Day: ${data.pickupDay}
-Preferred Time: ${data.pickupTime}`;
+Address: ${data.pickupAddress}`;
 }
 
 function getUserAddress(user) {
@@ -32,57 +46,99 @@ async function handleRegistration(client, message, phone, sess) {
     case 'reg_name': {
       if (!isValidName(body)) { await message.reply(msg('invalidName', lang)); return; }
       session.setData(phone, 'regName', body);
-      session.set(phone, { step: 'reg_state' });
-      const stateList = STATES.map((s, i) => `${i + 1}. ${s}`).join('\n');
-      await message.reply(lang === 'pid'
-        ? `✅ Great! Which state you dey?\n\n${stateList}\n\nReply with number.`
-        : `✅ Great! Which state are you in?\n\n${stateList}\n\nReply with number.`);
-      return;
-    }
-    case 'reg_state': {
-      if (!isMenuChoice(body, STATES.length)) { await message.reply(msg('invalidChoice', lang)); return; }
-      const state = STATES[getMenuChoice(body) - 1];
-      session.setData(phone, 'regState', state);
       session.set(phone, { step: 'reg_lga' });
-      const lgaList = LGAS.map((l, i) => `${i + 1}. ${l}`).join('\n');
+      const lgaList = ECOSORT_LGAS.map((l, i) => `${i + 1}. ${l}`).join('\n');
       await message.reply(lang === 'pid'
-        ? `✅ Nice. Choose your LGA:\n\n${lgaList}\n\nReply with number.`
-        : `✅ Nice. Choose your LGA:\n\n${lgaList}\n\nReply with number.`);
+        ? `✅ Thanks, ${body}!\n\n📍 *Choose Your LGA (Lagos)*\n\n${lgaList}\n${ECOSORT_LGAS.length + 1}. My LGA is not listed — I'll type it\n\nReply with number.`
+        : `✅ Thanks, ${body}!\n\n📍 *Select Your Local Government Area (Lagos)*\n\n${lgaList}\n${ECOSORT_LGAS.length + 1}. My LGA is not listed — I'll type it\n\nReply with number.`);
       return;
     }
     case 'reg_lga': {
-      if (!isMenuChoice(body, LGAS.length)) { await message.reply(msg('invalidChoice', lang)); return; }
-      const lga = LGAS[getMenuChoice(body) - 1];
-      session.setData(phone, 'regLga', lga);
+      const maxLga = ECOSORT_LGAS.length + 1;
+      if (!isMenuChoice(body, maxLga)) { await message.reply(msg('invalidChoice', lang)); return; }
+      const lgaChoice = getMenuChoice(body);
+      if (lgaChoice === maxLga) {
+        session.set(phone, { step: 'reg_lga_custom' });
+        await message.reply(lang === 'pid'
+          ? `📍 Type your Local Government Area name:\n\n_Or reply *0* to go back to the list._`
+          : `📍 Type your Local Government Area name:\n\n_Or reply *0* to go back to the list._`);
+        return;
+      }
+      session.setData(phone, 'regLga', ECOSORT_LGAS[lgaChoice - 1]);
       session.set(phone, { step: 'reg_address' });
       await message.reply(lang === 'pid'
-        ? `✅ Good. Enter your full address now:`
-        : `✅ Good. Enter your full address now:`);
+        ? `✅ Enter your full residential address:`
+        : `✅ Enter your full residential address:`);
+      return;
+    }
+    case 'reg_lga_custom': {
+      if (body === '0') {
+        session.set(phone, { step: 'reg_lga' });
+        const lgaList = ECOSORT_LGAS.map((l, i) => `${i + 1}. ${l}`).join('\n');
+        await message.reply(lang === 'pid'
+          ? `📍 *Choose Your LGA (Lagos)*\n\n${lgaList}\n${ECOSORT_LGAS.length + 1}. My LGA is not listed — I'll type it\n\nReply with number.`
+          : `📍 *Select Your Local Government Area (Lagos)*\n\n${lgaList}\n${ECOSORT_LGAS.length + 1}. My LGA is not listed — I'll type it\n\nReply with number.`);
+        return;
+      }
+      if (body.length < 3) { await message.reply(msg('retry', lang)); return; }
+      if (!isValidLagosArea(body)) {
+        await message.reply(lang === 'pid'
+          ? `❌ *"${body}"* no look like any Lagos LGA.\n\nPlease enter a valid Lagos Local Government Area (e.g. Ikorodu, Apapa, Eti-Osa).\n\n_Or reply *0* to go back to the list._`
+          : `❌ *"${body}"* doesn't appear to be a Lagos Local Government Area.\n\nPlease enter a valid Lagos LGA name (e.g. Ikorodu, Apapa, Eti-Osa).\n\n_Or reply *0* to go back to the list._`);
+        return;
+      }
+      session.setData(phone, 'regLgaCustom', body);
+      session.set(phone, { step: 'reg_lga_waitlist' });
+      await message.reply(lang === 'pid'
+        ? `📍 *${body}* no dey cover by EcoSort yet.\n\nWe dey expand fast! Join our waitlist and we go notify you when we reach *${body}*.\n\n1️⃣ Yes, add me to the waitlist\n2️⃣ Choose a different LGA\n3️⃣ Go back to start\n\nReply with number.`
+        : `📍 *${body}* is not yet covered by EcoSort.\n\nWe're expanding rapidly! Join our waitlist and we'll notify you as soon as EcoSort arrives in *${body}*.\n\n1️⃣ Yes, add me to the waitlist\n2️⃣ Choose a different LGA instead\n3️⃣ Go back to the start\n\nReply with number.`);
+      return;
+    }
+    case 'reg_lga_waitlist': {
+      if (!isMenuChoice(body, 3)) { await message.reply(msg('invalidChoice', lang)); return; }
+      const wChoice = getMenuChoice(body);
+      if (wChoice === 3) {
+        session.set(phone, { step: 'start' });
+        await message.reply(lang === 'pid'
+          ? `Okay! Type *hi* or *hello* to start anytime. ♻️`
+          : `No problem! Type *hi* or *hello* to start over anytime. ♻️`);
+        return;
+      }
+      if (wChoice === 2) {
+        session.set(phone, { step: 'reg_lga' });
+        const lgaList = ECOSORT_LGAS.map((l, i) => `${i + 1}. ${l}`).join('\n');
+        await message.reply(lang === 'pid'
+          ? `📍 *Choose Your LGA (Lagos)*\n\n${lgaList}\n${ECOSORT_LGAS.length + 1}. My LGA is not listed — I'll type it\n\nReply with number.`
+          : `📍 *Select Your Local Government Area (Lagos)*\n\n${lgaList}\n${ECOSORT_LGAS.length + 1}. My LGA is not listed — I'll type it\n\nReply with number.`);
+        return;
+      }
+      // wChoice === 1: join waitlist
+      const lgaName = sess.data.regLgaCustom || 'your area';
+      try {
+        storage.insert('waitlist', {
+          phone,
+          name: sess.data.regName || 'Unknown',
+          lga: lgaName,
+          joinedAt: timestamp()
+        });
+      } catch (_) {}
+      session.set(phone, { step: 'start' });
+      await message.reply(lang === 'pid'
+        ? `✅ *You don join our waitlist!*\n\nWe go send you message as soon as EcoSort reach *${lgaName}*. Thank you for your patience! ♻️\n\n_Type *hi* or *hello* anytime to check again._`
+        : `✅ *You're on the waitlist!*\n\nWe'll notify you as soon as EcoSort expands to *${lgaName}*. Thank you for your interest! ♻️\n\n_Type *hi* or *hello* anytime to check back._`);
       return;
     }
     case 'reg_address': {
       if (body.length < 5) { await message.reply(msg('retry', lang)); return; }
-      session.setData(phone, 'regAddress', body);
-      session.set(phone, { step: 'reg_household_size' });
-      await message.reply(lang === 'pid'
-        ? `✅ Almost done! How many people dey your household?\n\n1️⃣ 1 person\n2️⃣ 2-3 people\n3️⃣ 4-5 people\n4️⃣ 6-7 people\n5️⃣ 8+ people\n\nReply with number.`
-        : `✅ Almost done! How many people are in your household?\n\n1️⃣ 1 person\n2️⃣ 2-3 people\n3️⃣ 4-5 people\n4️⃣ 6-7 people\n5️⃣ 8+ people\n\nReply with number.`);
-      return;
-    }
-    case 'reg_household_size': {
-      if (!isMenuChoice(body, 5)) { await message.reply(msg('invalidChoice', lang)); return; }
-      const sizes = ['1 person', '2-3 people', '4-5 people', '6-7 people', '8+ people'];
-      const householdSize = sizes[getMenuChoice(body) - 1];
       const d = sess.data;
       const ecoId = generateEcoId('household');
       const user = {
         id: ecoId,
         phone,
         name: d.regName,
-        state: d.regState,
+        state: 'Lagos',
         lga: d.regLga,
-        address: d.regAddress,
-        householdSize,
+        address: body,
         lang,
         points: 0,
         monthlyPoints: 0,
@@ -142,11 +198,9 @@ async function handlePickupRequest(client, message, phone, sess) {
       if (!isMenuChoice(body, 2)) { await message.reply(msg('invalidChoice', lang)); return; }
       if (getMenuChoice(body) === 1) {
         session.setData(phone, 'pickupAddress', user.address);
-        session.set(phone, { step: 'pickup_day' });
-        const dayList = DAYS.map((d, i) => `${i + 1}. ${d}`).join('\n');
-        await message.reply(lang === 'pid'
-          ? `📅 Choose collection day:\n\n${dayList}`
-          : `📅 Choose collection day:\n\n${dayList}`);
+        session.set(phone, { step: 'pickup_review' });
+        const summary = buildPickupSummary({ ...sess.data, pickupAddress: user.address });
+        await message.reply(msg('requestPickup.reviewRequest', lang, summary));
       } else {
         session.set(phone, { step: 'pickup_address_new' });
         await message.reply(lang === 'pid'
@@ -158,28 +212,8 @@ async function handlePickupRequest(client, message, phone, sess) {
     case 'pickup_address_new': {
       if (body.length < 5) { await message.reply(msg('retry', lang)); return; }
       session.setData(phone, 'pickupAddress', body);
-      session.set(phone, { step: 'pickup_day' });
-      const dayList = DAYS.map((d, i) => `${i + 1}. ${d}`).join('\n');
-      await message.reply(lang === 'pid'
-        ? `📅 Choose collection day:\n\n${dayList}`
-        : `📅 Choose collection day:\n\n${dayList}`);
-      return;
-    }
-    case 'pickup_day': {
-      if (!isMenuChoice(body, DAYS.length)) { await message.reply(msg('invalidChoice', lang)); return; }
-      session.setData(phone, 'pickupDay', DAYS[getMenuChoice(body) - 1]);
-      session.set(phone, { step: 'pickup_time' });
-      const timeList = TIME_SLOTS.map((t, i) => `${i + 1}. ${t}`).join('\n');
-      await message.reply(lang === 'pid'
-        ? `🕐 Choose collection time:\n\n${timeList}`
-        : `🕐 Choose collection time:\n\n${timeList}`);
-      return;
-    }
-    case 'pickup_time': {
-      if (!isMenuChoice(body, TIME_SLOTS.length)) { await message.reply(msg('invalidChoice', lang)); return; }
-      session.setData(phone, 'pickupTime', TIME_SLOTS[getMenuChoice(body) - 1]);
       session.set(phone, { step: 'pickup_review' });
-      const summary = buildPickupSummary(sess.data);
+      const summary = buildPickupSummary({ ...sess.data, pickupAddress: body });
       await message.reply(msg('requestPickup.reviewRequest', lang, summary));
       return;
     }
@@ -212,8 +246,6 @@ async function handlePickupRequest(client, message, phone, sess) {
         wasteType: sess.data.pickupWaste,
         quantityKg: sess.data.pickupQuantity,
         address: sess.data.pickupAddress,
-        preferredDay: sess.data.pickupDay,
-        preferredTime: sess.data.pickupTime,
         status: 'requested',
         collectorId: assignedCollector ? assignedCollector.id : null,
         collectorName: assignedCollector ? assignedCollector.name : null,
@@ -223,7 +255,7 @@ async function handlePickupRequest(client, message, phone, sess) {
       };
       try {
         const code = crypto.randomBytes(3).toString('hex').toUpperCase();
-        const expiresAt = new Date(Date.now() + (2 * 60 * 60 * 1000)).toISOString();
+        const expiresAt = new Date(Date.now() + (4 * 60 * 60 * 1000)).toISOString();
         pickup.confirmation = { code, expiresAt };
       } catch (_) {}
       storage.insert('pickups', pickup);
@@ -246,8 +278,7 @@ async function handlePickupRequest(client, message, phone, sess) {
         `🚛 *New Pickup Request!*\n\n` +
         `Pickup ID: *${pickupId}*\n` +
         `♻️ ${pickup.wasteType}  |  ⚖️ ${pickup.quantityKg}kg\n` +
-        `📍 ${pickup.address}\n` +
-        `⏰ ${pickup.preferredDay}, ${pickup.preferredTime}\n\n` +
+        `📍 ${pickup.address}\n\n` +
         `Go to *Available Pickups* from your menu to accept.`;
       for (const col of allCollectors) {
         try { await client.sendMessage(`${col.phone}@c.us`, pickupNotice); } catch (_) {}
@@ -631,12 +662,12 @@ async function handle(client, message, phone, sess) {
   }
 
   // Registration steps
-  if (['reg_name','reg_state','reg_lga','reg_address','reg_household_size'].includes(sess.step)) {
+  if (['reg_name','reg_lga','reg_lga_custom','reg_lga_waitlist','reg_address'].includes(sess.step)) {
     return handleRegistration(client, message, phone, sess);
   }
 
   // Pickup steps
-  if (['pickup_waste','pickup_quantity','pickup_address_choice','pickup_address_new','pickup_day','pickup_time','pickup_review'].includes(sess.step)) {
+  if (['pickup_waste','pickup_quantity','pickup_address_choice','pickup_address_new','pickup_review'].includes(sess.step)) {
     return handlePickupRequest(client, message, phone, sess);
   }
 

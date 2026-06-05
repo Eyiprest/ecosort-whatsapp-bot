@@ -51,8 +51,8 @@ async function handle(client, message, phone, sess) {
     };
 
     const next = lang === 'pid'
-      ? `✅ You don choose *${roleLabel.pid[role]}*!\n\nType *register* to create your account, or type *menu* if you already have one.`
-      : `✅ You selected *${roleLabel.en[role]}*!\n\nType *register* to create your account, or type *menu* if you already have one.`;
+      ? `✅ You don choose *${roleLabel.pid[role]}!*\n\nReply with:\n👉 *REGISTER* — Create a new account\n👉 *MENU* — Access your existing account`
+      : `✅ You have selected *${roleLabel.en[role]}!*\n\nReply with:\n👉 *REGISTER* — Create a new account\n👉 *MENU* — Access your existing account`;
 
     await message.reply(next);
     return;

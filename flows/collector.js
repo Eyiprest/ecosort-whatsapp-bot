@@ -290,19 +290,11 @@ async function handleCompletePickup(client, message, phone, sess) {
       return;
     }
     session.setData(phone, 'completePickupId', pickup.id);
-    session.set(phone, { step: 'col_complete_material' });
-    const matList = MATERIALS.map((m, i) => `${i + 1}. ${materialEmoji(m)}`).join('\n');
-    await message.reply(lang === 'pid'
-      ? `✅ Good! Wetin material you collect?\n\n${matList}\n\nReply with number.`
-      : `✅ What material did you collect?\n\n${matList}\n\nReply with number.`);
-    return;
-  }
-
-  if (sess.step === 'col_complete_material') {
-    if (!isMenuChoice(body, MATERIALS.length)) { await message.reply(msg('invalidChoice', lang)); return; }
-    session.setData(phone, 'completeMaterial', MATERIALS[getMenuChoice(body) - 1]);
+    session.setData(phone, 'completeMaterial', pickup.wasteType || 'Mixed Waste');
     session.set(phone, { step: 'col_complete_weight' });
-    await message.reply(lang === 'pid' ? '✅ How many KG you collect? (e.g. 15):' : '✅ How many KG collected? (e.g. 15):');
+    await message.reply(lang === 'pid'
+      ? `✅ *${pickup.wasteType || 'Mixed Waste'}* — How many KG you collect? (e.g. 15):`
+      : `✅ *${pickup.wasteType || 'Mixed Waste'}* — How many KG collected? (e.g. 15):`);
     return;
   }
 
@@ -780,7 +772,7 @@ async function handle(client, message, phone, sess) {
   if (sess.step === 'col_offer_select') return handleColOfferSelect(client, message, phone, sess);
   if (sess.step === 'col_offer_action') return handleColOfferAction(client, message, phone, sess);
   if (sess.step === 'col_offer_counter_price') return handleColOfferCounter(client, message, phone, sess);
-  if (['col_complete_id','col_complete_material','col_complete_weight'].includes(sess.step)) {
+  if (['col_complete_id','col_complete_weight'].includes(sess.step)) {
     return handleCompletePickup(client, message, phone, sess);
   }
   if (['col_help_menu','col_help_topic'].includes(sess.step)) return handleHelp(client, message, phone, sess);

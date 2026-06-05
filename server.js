@@ -33,7 +33,7 @@ const education = require('./flows/education');
 });
 
 // ── Ensure JSON data files exist ─────────────────────────────────────────────
-const dataFiles = ['users', 'collectors', 'buyers', 'pickups', 'listings', 'offers', 'transactions', 'certificates', 'notifications'];
+const dataFiles = ['users', 'collectors', 'buyers', 'pickups', 'listings', 'offers', 'transactions', 'certificates', 'notifications', 'waitlist'];
 dataFiles.forEach(name => {
   const fp = path.join('./data', `${name}.json`);
   if (!fs.existsSync(fp)) fs.writeFileSync(fp, '[]', 'utf8');

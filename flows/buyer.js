@@ -9,6 +9,17 @@ const { generateCertificatePDF } = require('../utils/pdfGenerator');
 
 const MATERIAL_INTERESTS = ['PET Bottles', 'Aluminum & Metals', 'Nylon & Plastics', 'Paper & Cartons', 'Mixed Recyclables', 'All Materials'];
 const VOLUMES = ['0–1 tonne/month', '1–5 tonnes/month', '5–20 tonnes/month', '20+ tonnes/month'];
+const SEARCH_CATEGORIES = [
+  { label: '♻️ PET Bottles', keywords: ['PET'] },
+  { label: '🔩 Metals & Aluminum', keywords: ['Aluminum', 'Metal', 'Alumin'] },
+  { label: '🛍️ Nylon & Plastics', keywords: ['Nylon', 'HDPE', 'Plastic'] },
+  { label: '📄 Paper & Cartons', keywords: ['Carton', 'Paper'] },
+  { label: '🍾 Glass', keywords: ['Glass'] },
+  { label: '🌱 Organic Waste', keywords: ['Organic'] },
+  { label: '⚡ E-Waste', keywords: ['E-Waste', 'Electronic', 'Battery'] },
+  { label: '🗑️ Mixed Recyclables', keywords: ['Mixed'] },
+  { label: '📋 All Materials', keywords: [] }
+];
 
 // ── REGISTRATION ──────────────────────────────────────────────────────────────
 async function handleRegistration(client, message, phone, sess) {
@@ -637,6 +648,71 @@ async function handle(client, message, phone, sess) {
   if (['buyer_reg_company','buyer_reg_contact','buyer_reg_interest','buyer_reg_volume','buyer_reg_location'].includes(sess.step)) {
     return handleRegistration(client, message, phone, sess);
   }
+
+  if (sess.step === 'market_search_category') {
+    const maxCat = SEARCH_CATEGORIES.length;
+    if (!isMenuChoice(rawBody, maxCat)) {
+      await message.reply(msg('invalidChoice', lang));
+      return;
+    }
+    const catChoice = getMenuChoice(rawBody);
+    const selected = SEARCH_CATEGORIES[catChoice - 1];
+
+    if (selected.keywords.length === 0) {
+      await viewListings(client, message, phone, sess);
+      return;
+    }
+
+    const results = storage.findAll('listings', l =>
+      l.status === 'available' &&
+      selected.keywords.some(kw => l.material.toUpperCase().includes(kw.toUpperCase()))
+    );
+
+    if (results.length === 0) {
+      await message.reply(lang === 'pid'
+        ? `📭 No ${selected.label} dey available right now.\n\nTry another category or browse all materials.\n\n1️⃣ Search again\n2️⃣ Browse all materials\n3️⃣ Back to menu\n\nReply with number.`
+        : `📭 No ${selected.label} available right now.\n\nTry another category or browse all.\n\n1️⃣ Search again\n2️⃣ Browse all materials\n3️⃣ Back to menu\n\nReply with number.`);
+      session.set(phone, { step: 'market_no_results' });
+      return;
+    }
+
+    const shown = results.slice(0, 8);
+    const list = shown.map((l, i) =>
+      `*${i + 1}.* ${materialEmoji(l.material)} *${l.material}*  |  ${l.quantity}kg  |  ₦${l.pricePerKg}/kg\n` +
+      `   💵 ₦${l.totalValue.toLocaleString()}  |  📍 ${l.location}\n` +
+      `   👤 ${l.collectorName} ${l.collectorVerified ? '✅' : ''}  |  ⭐ ${l.collectorRating}/5` +
+      (l.notes ? `\n   📝 ${l.notes}` : '')
+    ).join('\n\n');
+
+    await message.reply(
+      `🔍 *${selected.label} (${shown.length} available):*\n\n${list}\n\n` +
+      (lang === 'pid'
+        ? `Reply with a number (1–${shown.length}) to view and make offer.\nOr *0* to go back.`
+        : `Reply with a number (1–${shown.length}) to view details and make an offer.\nOr *0* to go back.`)
+    );
+
+    session.setData(phone, 'listingsInView', shown.map(l => l.id));
+    session.set(phone, { step: 'market_browse_select' });
+    return;
+  }
+
+  if (sess.step === 'market_no_results') {
+    if (!isMenuChoice(rawBody, 3)) { await message.reply(msg('invalidChoice', lang)); return; }
+    const nrChoice = getMenuChoice(rawBody);
+    if (nrChoice === 1) {
+      session.set(phone, { step: 'market_search_category' });
+      const catList = SEARCH_CATEGORIES.map((c, i) => `${i + 1}️⃣ ${c.label}`).join('\n');
+      await message.reply(lang === 'pid'
+        ? `🔍 *Search Materials*\n\nChoose category:\n\n${catList}\n\nReply with number.`
+        : `🔍 *Search Materials*\n\nSelect a material category:\n\n${catList}\n\nReply with number.`);
+      return;
+    }
+    if (nrChoice === 2) { await viewListings(client, message, phone, sess); return; }
+    session.set(phone, { step: 'buyer_menu' });
+    await message.reply(msg('buyerMenu', lang));
+    return;
+  }
+
   if (['offer_listing_id','offer_price','offer_counter'].includes(sess.step)) return handleOffer(client, message, phone, sess);
   if (sess.step === 'market_browse_select') return handleBrowseSelect(client, message, phone, sess);
   if (sess.step === 'market_listing_action') return handleListingAction(client, message, phone, sess);
@@ -675,10 +751,11 @@ async function handle(client, message, phone, sess) {
     const choice = getMenuChoice(rawBody);
     switch (choice) {
       case 1: {
-        session.set(phone, { step: 'market_search' });
+        session.set(phone, { step: 'market_search_category' });
+        const catList = SEARCH_CATEGORIES.map((c, i) => `${i + 1}️⃣ ${c.label}`).join('\n');
         await message.reply(lang === 'pid'
-          ? '🔍 Enter material or location (e.g. PET, Ikeja, Aluminum):'
-          : '🔍 Enter material or location to search (e.g. PET, Ikeja, Aluminum):');
+          ? `🔍 *Search Materials*\n\nChoose category:\n\n${catList}\n\nReply with number.`
+          : `🔍 *Search Materials*\n\nSelect a material category:\n\n${catList}\n\nReply with number.`);
         return;
       }
       case 2: {
