@@ -7,10 +7,25 @@
  */
 const supabase = require('./supabase');
 
-/* In-memory cache: { 'english:welcome:greeting': 'Hello...' } */
+/* In-memory cache: { 'english:welcome': 'Hello...' } */
 let _cache = {};
 let _lastLoad = 0;
 const REFRESH_MS = 5 * 60 * 1000; // 5 minutes
+
+/*
+ * Maps admin-dashboard key → bot key when the two differ beyond snake/camel case.
+ * When caching a message stored under an admin key, we also store it under the
+ * alias so the bot's msg() lookups (which use camelCase bot keys) find it.
+ */
+const ADMIN_TO_BOT_ALIAS = {
+  hh_complete:      'registered',
+  household_main:   'mainMenu',
+  collector_main:   'collectorMenu',
+  buyer_main:       'buyerMenu',
+  available:        'availableRewards',
+  submitted:        'pickupSubmitted',
+  lang_changed_en:  'langChanged',
+};
 
 async function loadFromSupabase() {
   if (!supabase) return false;
@@ -24,6 +39,17 @@ async function loadFromSupabase() {
     for (const row of data ?? []) {
       const cacheKey = `${row.language}:${row.key}`;
       next[cacheKey] = row.message;
+      // Store a camelCase alias so bot calls like msg('roleSelect') find
+      // admin-dashboard keys saved as snake_case (e.g. 'role_select')
+      const camel = row.key.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+      if (camel !== row.key) {
+        next[`${row.language}:${camel}`] = row.message;
+      }
+      // Store explicit alias for keys whose names differ beyond casing
+      const botAlias = ADMIN_TO_BOT_ALIAS[row.key];
+      if (botAlias) {
+        next[`${row.language}:${botAlias}`] = row.message;
+      }
     }
     _cache = next;
     _lastLoad = Date.now();
